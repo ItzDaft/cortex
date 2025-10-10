@@ -1,0 +1,1 @@
+<?php echo "¡Hola, mundo! El servidor está funcionando. La hora es: " . date("H:i:s"); ?>

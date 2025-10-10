@@ -1,0 +1,12 @@
+RewriteEngine On
+RewriteBase /backend/public/
+
+# Permitir archivos estáticos
+<FilesMatch "\.(jpg|jpeg|png|gif|css|js|ico|woff|woff2|ttf|svg|pdf)$">
+    Require all granted
+</FilesMatch>
+
+# Redirigir todo a index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]
