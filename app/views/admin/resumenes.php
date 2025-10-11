@@ -1,6 +1,10 @@
 <h1 class="mb-4">Gestión General de Resúmenes</h1>
 <?php CSRFHelper::getTokenInput(); ?>
 <div id="mensaje-resumenes"></div>
+
+<div class="mb-4">
+    <input type="text" id="buscador-resumenes" class="form-control" placeholder="Buscar por título, autor o área...">
+</div>
 <div class="row mb-4">
     <div class="col-lg-3 col-md-6 mb-4">
         <div class="card text-white bg-primary h-100">
@@ -12,7 +16,7 @@
     </div>
 
     <?php 
-    unset($estadisticasResumenes['Total']); // Se quita el total para no repetirlo
+    unset($estadisticasResumenes['Total']); 
     foreach ($estadisticasResumenes as $area => $cantidad):
     ?>
     <div class="col-lg-3 col-md-6 mb-4">
@@ -58,7 +62,9 @@ foreach ($ordenDeEstatus as $estatus => $titulo):
                                 <td><?php echo htmlspecialchars($resumen['nombre_area']); ?></td>
                                 <td><?php echo htmlspecialchars($resumen['revisores_asignados'] ?? 'Ninguno'); ?></td>
                                 <td>
-                                    <button class="btn btn-sm btn-info btn-editar-area" data-id="<?php echo $resumen['id']; ?>" data-area-id="<?php echo $resumen['area_id']; ?>">Modificar Área</button>
+                                    <?php if ($resumen['estatus'] != 'Aceptado' && $resumen['estatus'] != 'En Revision'): ?>
+                                        <button class="btn btn-sm btn-info btn-editar-area" data-id="<?php echo $resumen['id']; ?>" data-area-id="<?php echo $resumen['area_id']; ?>">Modificar Área</button>
+                                    <?php endif; ?>
                                     <?php if ($resumen['estatus'] == 'Aceptado' || $resumen['estatus'] == 'Rechazado'): ?>
                                         <button class="btn btn-sm btn-primary btn-ver-evaluaciones" data-id="<?php echo $resumen['id']; ?>">Ver Evaluaciones</button>
                                     <?php endif; ?>
@@ -101,6 +107,27 @@ foreach ($ordenDeEstatus as $estatus => $titulo):
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const buscador = document.getElementById('buscador-resumenes');
+    buscador.addEventListener('input', function() {
+        const filtro = this.value.trim().toLowerCase();
+        document.querySelectorAll('table tbody').forEach(function(tbody) {
+            tbody.querySelectorAll('tr').forEach(function(row) {
+                if (row.children.length === 1 && row.textContent.includes('No hay resúmenes')) {
+                    row.style.display = filtro ? 'none' : '';
+                    return;
+                }
+                const titulo = row.children[1]?.textContent.toLowerCase() || '';
+                const autor = row.children[2]?.textContent.toLowerCase() || '';
+                const area = row.children[3]?.textContent.toLowerCase() || '';
+                if (titulo.includes(filtro) || autor.includes(filtro) || area.includes(filtro)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    });
+
     const baseUrl = '<?php echo BASE_URL; ?>';
     const csrfToken = '<?php echo $_SESSION["csrf_token"] ?? ""; ?>';
     const cuerpoDocumento = document.body;    const modificarAreaModal = new bootstrap.Modal(document.getElementById('modificarAreaModal'));

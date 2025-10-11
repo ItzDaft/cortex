@@ -1,11 +1,15 @@
 <?php CSRFHelper::getTokenInput(); ?> 
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>Gestión de Usuarios test</h1>
+    <h1>Gestión de Usuarios</h1>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#crearUsuarioModal">Crear Nuevo Usuario</button>
 </div>
 
 <div id="mensaje-usuarios"></div>
+
+<div class="mb-4">
+    <input type="text" id="buscador-usuarios" class="form-control" placeholder="Buscar por nombre o correo...">
+</div>
 <div class="row mb-4">
     <div class="col-lg-3 col-md-6 mb-4">
         <div class="card text-white bg-primary h-100">
@@ -32,7 +36,7 @@
     <?php endforeach; ?>
 </div>
 <?php
-$ordenDeRoles = ['Administrador', 'Coordinador', 'Coordinador de Area', 'Revisor de Pagos', 'Autor', 'Asistente','Asistente con Cartel'];
+$ordenDeRoles = ['Administrador', 'Coordinador', 'Coordinador de Area', 'Revisor de Pagos', 'Autor', 'Asistente','Asistente con Cartel', 'Revisor de Extensos'];
 
 foreach ($ordenDeRoles as $rolNombre):
     $listaUsuarios = $usuariosPorRol[$rolNombre] ?? [];
@@ -151,7 +155,6 @@ foreach ($ordenDeRoles as $rolNombre):
                 </select>
             </div>
 
-            <!-- Área de Especialización (solo para Coordinador de Areaes) -->
             <div class="mb-3 d-none" id="area-container-editar">
                 <label for="area_id_editar" class="form-label">Área de Especialización</label>
                 <select id="area_id_editar" class="form-select">
@@ -207,6 +210,26 @@ foreach ($ordenDeRoles as $rolNombre):
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const buscador = document.getElementById('buscador-usuarios');
+    buscador.addEventListener('input', function() {
+        const filtro = this.value.trim().toLowerCase();
+        document.querySelectorAll('.tabla-usuarios-body').forEach(function(tbody) {
+            tbody.querySelectorAll('tr').forEach(function(row) {
+                if (row.children.length === 1 && row.textContent.includes('No hay usuarios')) {
+                    row.style.display = filtro ? 'none' : '';
+                    return;
+                }
+                const nombre = row.children[2]?.textContent.toLowerCase() || '';
+                const correo = row.children[3]?.textContent.toLowerCase() || '';
+                if (nombre.includes(filtro) || correo.includes(filtro)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    });
+
     const baseUrl = '<?php echo BASE_URL; ?>';
     const csrfToken = '<?php echo $_SESSION["csrf_token"] ?? ""; ?>';
     const mensajeDiv = document.getElementById('mensaje-usuarios');
@@ -247,7 +270,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(res => res.json()).then(data => {
             if (data.error) { alert('Error: ' + data.error); }
-            else { location.reload(); } // Recargamos para ver al nuevo usuario en su tabla correcta
+            else { location.reload(); } 
         })
         .catch(() => alert('Ocurrió un error de conexión.'))
         .finally(() => {
@@ -271,7 +294,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('edit_institucion').value = usuario.institucion_procedencia;
                     const rolSelect = document.getElementById('rol_id_editar');
                     rolSelect.value = usuario.roles_ids?.[0] || '';
-                    rolSelect.dispatchEvent(new Event('change')); // Forzamos el evento para mostrar/ocultar el área
+                    rolSelect.dispatchEvent(new Event('change')); 
                     const areaSelect = document.getElementById('area_id_editar');
                     areaSelect.value = usuario.area_id || "";
                     editarModal.show();
@@ -289,7 +312,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(res => res.json())
                 .then(data => {
                     alert(data.mensaje || data.error);
-                    location.reload(); // Recargamos para ver el cambio de estado
+                    location.reload(); 
                 });
             }
         }

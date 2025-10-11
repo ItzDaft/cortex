@@ -44,6 +44,9 @@
 </div>
 
 <hr>
+<div class="mb-4">
+    <input type="text" id="buscador-pagos" class="form-control" placeholder="Buscar por nombre de usuario...">
+</div>
 <h3 class="mt-4 mb-3">Desglose de Ingresos Aprobados</h3>
 <div class="row">
     <?php foreach($estadisticasPorTipo as $tipo): ?>
@@ -111,3 +114,28 @@ foreach ($ordenDeEstatus as $estatus => $titulo):
 </div>
 
 <?php endforeach; ?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const buscador = document.getElementById('buscador-pagos');
+    if (buscador) {
+        buscador.addEventListener('input', function() {
+            const filtro = this.value.trim().toLowerCase();
+            document.querySelectorAll('table tbody').forEach(function(tbody) {
+                tbody.querySelectorAll('tr').forEach(function(row) {
+                    if (row.children.length === 1 && row.textContent.includes('No hay pagos')) {
+                        row.style.display = filtro ? 'none' : '';
+                        return;
+                    }
+                    const usuario = row.children[1]?.textContent.toLowerCase() || '';
+                    if (usuario.includes(filtro)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        });
+    }
+});
+</script>
