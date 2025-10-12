@@ -98,4 +98,29 @@ public static function obtenerUltimoIntento(int $extenso_id): int {
     $stmt->execute(['extenso_id' => $extenso_id]);
     return (int)$stmt->fetchColumn();
 }
+/**
+ * Obtiene todos los extensos con detalles completos para el panel de admin.
+ */
+public static function obtenerTodosConDetalles(): array {
+    $pdo = Database::conectar();
+    $sql = "SELECT 
+                e.id,
+                e.estatus_extenso,
+                r.titulo,
+                u.nombre_completo as autor_nombre,
+                a.nombre_area,
+                GROUP_CONCAT(DISTINCT rev_user.nombre_completo SEPARATOR ', ') as revisores_asignados
+            FROM extensos e
+            JOIN resumenes r ON e.resumen_id = r.id
+            JOIN usuarios u ON r.autor_id = u.id
+            JOIN areas_tematicas a ON r.area_id = a.id
+            LEFT JOIN extenso_versiones ev ON e.id = ev.extenso_id
+            LEFT JOIN evaluaciones_extensos ee ON ev.id = ee.extenso_version_id
+            LEFT JOIN usuarios rev_user ON ee.revisor_id = rev_user.id
+            GROUP BY e.id
+            ORDER BY e.id DESC";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute();
+    return $stmt->fetchAll();
+}
 }

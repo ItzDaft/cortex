@@ -206,7 +206,11 @@ public function resumenes() {
 
     $todosLosResumenes = Resumen::obtenerTodosConDetalles();
     $areas = AreaTematica::obtenerTodas();
-
+    $resumenesPorArea = [];
+    foreach ($todosLosResumenes as $resumen) {
+        $areaNombre = $resumen['nombre_area'];
+        $resumenesPorArea[$areaNombre][] = $resumen;
+    }
     $resumenesPorEstatus = [];
     foreach ($todosLosResumenes as $resumen) {
         $estatus = $resumen['estatus'];
@@ -339,5 +343,33 @@ public function enviarCorreoMasivo() {
     echo json_encode([
         'mensaje' => "Proceso completado. Correos enviados: $enviados. Correos fallidos: $fallidos."
     ]);
+}
+/**
+ * (API) Gets the full details of a summary to display in a modal.
+ */
+public function obtenerResumenDetalles($id) {
+    header('Content-Type: application/json');
+    if (!$this->autorizar()) return;
+
+    $resumen = Resumen::obtenerDetallesPorId((int)$id);
+
+    if ($resumen) {
+        echo json_encode($resumen);
+    } else {
+        http_response_code(404);
+        echo json_encode(['error' => 'Resumen not found.']);
+    }
+}
+/**
+ * Muestra el panel de gestión de artículos extensos.
+ */
+public function extensos() {
+    if (!$this->autorizar()) return;
+
+    $extensos = Extenso::obtenerTodosConDetalles();
+
+    require_once BACKEND_ROOT . '/app/views/layout/header.php';
+    require_once BACKEND_ROOT . '/app/views/admin/extensos.php';
+    require_once BACKEND_ROOT . '/app/views/layout/footer.php';
 }
 }

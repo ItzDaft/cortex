@@ -221,4 +221,25 @@ public static function contarPorArea(): array {
     // Devuelve un array asociativo ['Nombre del Área' => total]
     return $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 }
+/**
+ * Gets the full details of a single summary by its ID.
+ * @param int $id The ID of the summary.
+ * @return mixed Array with summary details or false.
+ */
+public static function obtenerDetallesPorId(int $id) {
+    $pdo = Database::conectar();
+    $sql = "SELECT
+                r.*,
+                u.nombre_completo as autor_nombre,
+                a.nombre_area,
+                (SELECT GROUP_CONCAT(rl.nombre_rol) FROM usuario_roles ur JOIN roles rl ON ur.rol_id = rl.id WHERE ur.usuario_id = u.id) as autor_roles
+            FROM resumenes r
+            JOIN usuarios u ON r.autor_id = u.id
+            JOIN areas_tematicas a ON r.area_id = a.id
+            WHERE r.id = :id";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(['id' => $id]);
+    return $stmt->fetch();
+}
 }
