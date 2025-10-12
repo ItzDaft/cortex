@@ -164,10 +164,10 @@ public function enviarEvaluacion() {
     $resumenesDisponibles = Resumen::buscarDisponiblesPorArea($revisor['area_id'], $revisor['id']);
     $revisionesAsignadas = Revision::buscarAsignadasPorRevisor($revisor['id']);
     $revisionesCompletadas = Revision::buscarCompletadasPorRevisor($revisor['id']);
-    $extensosPendientes = Extenso::obtenerPendientesDeAsignacion(); 
+   $extensosPendientes = Extenso::obtenerPendientesDeFiltroPorArea($revisor['area_id']); 
     $revisoresDisponibles = Usuario::buscarRevisoresExtensosPorArea($revisor['area_id']);
-     $extensosParaMiArea = array_filter($extensosPendientes, function($extenso) use ($revisor) {
-        return $extenso['area_id'] == $revisor['area_id'];
+    $extensosParaMiArea = array_filter($extensosPendientes, function($extenso) use ($revisor) {
+        return isset($extenso['area_id']) && $extenso['area_id'] == $revisor['area_id'];
     }); 
     $evaluacionesPorValidar = EvaluacionExtenso::buscarPendientesDeValidacion($revisor['id']);
     $extensosEnConflicto = Extenso::obtenerEnConflictoPorArea($revisor['area_id']);
@@ -275,6 +275,7 @@ public function asignarRevisoresExtenso() {
     }
 
     if (EvaluacionExtenso::asignarRevisores($datos['extenso_version_id'], $datos['revisores_ids'])) {
+        Extenso::actualizarEstatus($datos['extenso_version_id'], 'En Revisión'); 
         echo json_encode(['mensaje' => 'Revisores asignados con éxito.']);
     } else {
         http_response_code(500);
@@ -368,5 +369,23 @@ public function asignarTercerRevisor() {
         http_response_code(500);
         echo json_encode(['error' => 'No se pudo completar la asignación.']);
     }
+}
+/**
+ * (API) Devuelve un extenso al autor por problemas de formato.
+ */
+public function devolverExtensoPorFormato() {
+    header('Content-Type: application/json');
+    if (!$this->autorizar()) return;
+
+    $datos = json_decode(file_get_contents('php://input'), true);
+    if (empty($datos['extenso_id']) || empty($datos['comentarios'])) {
+        http_response_code(400); echo json_encode(['error' => 'Se requiere el ID del extenso y los comentarios.']); return;
+    }
+
+    Extenso::actualizarEstatusYComentarios($datos['extenso_id'], 'Rechazado por Formato', $datos['comentarios']); // Necesitaremos este nuevo método
+
+    // (Lógica opcional para notificar al autor por correo)
+
+    echo json_encode(['mensaje' => 'Extenso devuelto al autor con observaciones.']);
 }
 }

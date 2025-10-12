@@ -38,14 +38,12 @@ class ExtensoController {
         if (!is_dir($directorioSubida)) { mkdir($directorioSubida, 0777, true); }
 
         $extension = pathinfo($archivo['name'], PATHINFO_EXTENSION);
-        // Aquí se podría añadir lógica para obtener el número de intento (v1, v2, etc.)
         $nombreUnico = 'extenso_' . $extenso_id . '_v1_' . time() . '.' . $extension;
         $rutaDestino = $directorioSubida . $nombreUnico;
 
         if (move_uploaded_file($archivo['tmp_name'], $rutaDestino)) {
             Extenso::agregarVersion($extenso_id, 1, $nombreUnico);
-            Extenso::actualizarEstatus($extenso_id, 'En Revisión');
-
+            Extenso::actualizarEstatus($extenso_id, 'Pendiente de Filtro'); 
             echo json_encode(['mensaje' => 'Artículo extenso enviado con éxito.']);
         } else {
             http_response_code(500);
@@ -85,7 +83,6 @@ public function procesarReenvio($extenso_id) {
     try {
         $pdo->beginTransaction();
 
-        // 1. Borra las evaluaciones de la versión anterior para reiniciar el ciclo
         EvaluacionExtenso::eliminarEvaluacionesAnteriores($extenso_id);
 
         // 2. Sube el nuevo archivo
@@ -102,8 +99,7 @@ public function procesarReenvio($extenso_id) {
 
         // 3. Registra la nueva versión y actualiza el estado del extenso a 'En Revisión'
         Extenso::agregarVersion($extenso_id, $nuevoIntento, $nombreUnico);
-        Extenso::actualizarEstatus($extenso_id, 'En Revisión');
-
+        Extenso::actualizarEstatus($extenso_id, 'Pendiente de Filtro');
         $pdo->commit();
         echo json_encode(['mensaje' => 'Nueva versión enviada con éxito.']);
 

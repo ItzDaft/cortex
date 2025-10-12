@@ -115,32 +115,45 @@ if (isset($revisor['area_id'])) {
     </div>
 </div>
 
-<h3 class="mt-5">Artículos Extensos Pendientes de Asignación</h3>
+<h3 class="mt-5">Artículos Extensos Pendientes de Filtro</h3>
 <div class="card">
     <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead><tr><th>ID</th><th>Título del Artículo</th><th>Acciones</th></tr></thead>
-                <tbody>
-                    <?php if (empty($extensosParaMiArea)): ?>
-                        <tr><td colspan="3" class="text-center">No hay artículos extensos pendientes de asignar en tu área.</td></tr>
-                    <?php else: ?>
-                        <?php foreach ($extensosParaMiArea as $extenso): ?>
-                            <tr>
-                                <td><?php echo $extenso['id']; ?></td>
-                                <td><?php echo htmlspecialchars($extenso['titulo']); ?></td>
-                                <td>
-                                    <button class="btn btn-sm btn-info btn-asignar" data-extenso-id="<?php echo $extenso['id']; ?>" data-bs-toggle="modal" data-bs-target="#asignarModal">
-                                        Asignar Revisores
-                                    </button>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
+        <table class="table table-hover">
+            <thead><tr><th>ID</th><th>Título del Artículo</th><th>Acciones</th></tr></thead>
+            <tbody>
+                <?php if (empty($extensosParaMiArea)): // Asegúrate de que la variable sea la correcta ?>
+                    <tr><td colspan="3" class="text-center">No hay artículos por filtrar en tu área.</td></tr>
+                <?php else: ?>
+                    <?php foreach ($extensosParaMiArea as $extenso): ?>
+                        <tr>
+                            <td><?php echo $extenso['id']; ?></td>
+                            <td><?php echo htmlspecialchars($extenso['titulo']); ?></td>
+                            <td>
+                                <a href="<?php echo BASE_URL; ?>archivo/ver/extensos/<?php echo $extenso['archivo_ruta']; ?>" target="_blank" class="btn btn-sm btn-secondary">Ver Archivo</a>
+                                <button class="btn btn-sm btn-primary btn-asignar" data-extenso-id="<?php echo $extenso['id']; ?>" data-bs-toggle="modal" data-bs-target="#asignarModal">Asignar</button>
+                                <button class="btn btn-sm btn-warning btn-devolver" data-extenso-id="<?php echo $extenso['id']; ?>" data-bs-toggle="modal" data-bs-target="#devolverModal">Devolver por Formato</button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
     </div>
+</div>
+<div class="modal fade" id="devolverModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Devolver Artículo por Formato</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <p>Escribe las observaciones para que el autor corrija el formato (ej. "El archivo debe ser anónimo, por favor, elimina tus datos personales").</p>
+        <form id="devolverForm">
+            <input type="hidden" id="extenso_id_devolver">
+            <textarea class="form-control" id="comentarios_formato" rows="4" required></textarea>
+        </form>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" form="devolverForm" class="btn btn-warning">Enviar Observaciones al Autor</button></div>
+    </div>
+  </div>
 </div>
 
 <div class="modal fade" id="asignarModal" tabindex="-1">

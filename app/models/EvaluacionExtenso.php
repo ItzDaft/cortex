@@ -34,8 +34,10 @@ public static function buscarAsignadasPorRevisor(int $revisor_id): array {
             JOIN extenso_versiones ev ON ee.extenso_version_id = ev.id
             JOIN extensos e ON ev.extenso_id = e.id
             JOIN resumenes r ON e.resumen_id = r.id
-            WHERE ee.revisor_id = :revisor_id AND ee.estatus_evaluacion IN ('Pendiente de Firma', 'Pendiente de Validación')
-            ORDER BY ee.id DESC";
+            JOIN usuarios u ON ee.revisor_id = u.id
+            WHERE ee.revisor_id = :revisor_id 
+            AND ee.estatus_evaluacion IN ('Pendiente de Firma', 'Pendiente de Validación')
+            AND r.area_id = u.area_id"; 
     $stmt = $pdo->prepare($sql);
     $stmt->execute(['revisor_id' => $revisor_id]);
     return $stmt->fetchAll();
@@ -187,6 +189,22 @@ public static function buscarCompletadasPorRevisor(int $revisor_id): array {
             ORDER BY ee.id DESC";
     $stmt = $pdo->prepare($sql);
     $stmt->execute(['revisor_id' => $revisor_id]);
+    return $stmt->fetchAll();
+}
+/**
+ * Obtiene todas las evaluaciones de un extenso, incluyendo los detalles del revisor.
+ * @param int $extenso_id El ID del extenso.
+ * @return array Una lista de las evaluaciones.
+ */
+public static function obtenerPorExtensoId(int $extenso_id): array {
+    $pdo = Database::conectar();
+    $sql = "SELECT ee.*, u.nombre_completo as revisor_nombre
+            FROM evaluaciones_extensos ee
+            JOIN extenso_versiones ev ON ee.extenso_version_id = ev.id
+            JOIN usuarios u ON ee.revisor_id = u.id
+            WHERE ev.extenso_id = :extenso_id";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(['extenso_id' => $extenso_id]);
     return $stmt->fetchAll();
 }
 }

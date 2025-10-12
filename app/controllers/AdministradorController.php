@@ -372,4 +372,20 @@ public function extensos() {
     require_once BACKEND_ROOT . '/app/views/admin/extensos.php';
     require_once BACKEND_ROOT . '/app/views/layout/footer.php';
 }
+/**
+ * (API) Obtiene todas las evaluaciones de un artículo extenso para mostrarlas en un modal.
+ */
+public function obtenerEvaluacionesExtenso($extenso_id) {
+    header('Content-Type: application/json');
+    if (!$this->autorizar()) return;
+
+    $evaluaciones = EvaluacionExtenso::obtenerPorExtensoId((int)$extenso_id);
+
+    if ($evaluaciones) {
+        echo json_encode($evaluaciones);
+    } else {
+        // Devuelve un array vacío si no hay evaluaciones, lo cual no es un error.
+        echo json_encode([]);
+    }
+}
 }

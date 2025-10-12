@@ -40,6 +40,7 @@
     <a href="<?php echo BASE_URL; ?>administrador/usuarios" class="btn btn-primary btn-lg">Gestionar Usuarios</a>
     <a href="<?php echo BASE_URL; ?>administrador/resumenes" class="btn btn-secondary btn-lg">Gestionar Resúmenes</a>
     <a href="<?php echo BASE_URL; ?>administrador/pagos" class="btn btn-success btn-lg">Ver Pagos</a>
+        <a href="<?php echo BASE_URL; ?>administrador/extensos" class="btn btn-warning btn-lg">Gestionar Extensos</a>
     <button type="button" class="btn btn-info btn-lg" data-bs-toggle="modal" data-bs-target="#correoMasivoModal">
         <i class="bi bi-envelope-fill"></i> Enviar Correo Masivo
     </button>

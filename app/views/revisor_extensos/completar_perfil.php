@@ -22,6 +22,17 @@
                             <input type="text" class="form-control" id="cargo_actual" name="cargo_actual" required>
                         </div>
                         <div class="col-12 mb-3">
+                            <label for="area_id" class="form-label">Área Temática de Especialización</label>
+                            <select class="form-select" id="area_id" name="area_id" required>
+                                <option value="">-- Selecciona tu área principal de revisión --</option>
+                                <?php foreach ($areas as $area): ?>
+                                    <option value="<?php echo $area['id']; ?>">
+                                        <?php echo htmlspecialchars($area['nombre_area']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-12 mb-3">
                             <label for="area_especialidad" class="form-label">Área de Especialidad (Líneas de investigación)</label>
                             <textarea class="form-control" id="area_especialidad" name="area_especialidad" rows="3" required></textarea>
                         </div>

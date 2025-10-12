@@ -73,22 +73,38 @@ document.addEventListener('DOMContentLoaded', function() {
             const extensoId = event.target.getAttribute('data-id');
             evaluacionesBody.innerHTML = '<div class="text-center"><div class="spinner-border"></div></div>';
 
-            // Nota: La ruta 'administrador/obtenerEvaluacionesExtenso' es hipotética.
-            // Necesitaríamos crearla en AdministradorController si se requiere.
-            // Por ahora, mostraremos un mensaje de ejemplo.
+            fetch(`${baseUrl}administrador/obtenerEvaluacionesExtenso/${extensoId}`)
+                .then(res => res.json())
+                .then(evaluaciones => {
+                    evaluacionesBody.innerHTML = `<h5>Evaluaciones para el Extenso #${extensoId}</h5>`;
 
-            // Simulación de datos (reemplazar con un fetch real si es necesario)
-            evaluacionesBody.innerHTML = `
-                <h5>Evaluaciones para el Extenso #${extensoId}</h5>
-                <p>Funcionalidad para ver los detalles de cada evaluación (PDF firmado, comentarios, etc.) se puede implementar aquí.</p>
-                <hr>
-                <div>
-                    <h6>Evaluación 1 (Revisor A)</h6>
-                    <p><strong>Veredicto:</strong> Aceptado con Correcciones</p>
-                    <p><strong>Comentarios:</strong> El marco teórico necesita más profundidad.</p>
-                    <p><strong>PDF Firmado:</strong> <a href="#">ver_archivo.pdf</a></p>
-                </div>
-            `;
+                    if (evaluaciones.length === 0) {
+                        evaluacionesBody.innerHTML += '<p class="text-muted">Este extenso aún no tiene evaluaciones registradas.</p>';
+                        return;
+                    }
+
+                    let html = '';
+                    evaluaciones.forEach(eval => {
+                        const veredictoClass = eval.veredicto === 'Favorable y Publicable' ? 'text-success' : (eval.veredicto === 'No Publicable' ? 'text-danger' : 'text-warning');
+                        const pdfLink = eval.pdf_firmado_ruta 
+                            ? `<a href="${baseUrl}archivo/ver/evaluaciones_firmadas/${eval.pdf_firmado_ruta}" target="_blank">Ver PDF Firmado</a>`
+                            : '<span class="text-muted">Pendiente de firma</span>';
+
+                        html += `
+                            <div class="border-top pt-3 mt-3">
+                                <h6>Evaluación de: ${eval.revisor_nombre}</h6>
+                                <p class="mb-1"><strong>Veredicto:</strong> <span class="${veredictoClass}">${eval.veredicto}</span></p>
+                                <p class="mb-1"><strong>Observaciones:</strong> ${eval.observaciones_generales || '<em>Sin observaciones.</em>'}</p>
+                                <p class="mb-1"><strong>PDF Firmado:</strong> ${pdfLink}</p>
+                            </div>
+                        `;
+                    });
+                    evaluacionesBody.innerHTML += html;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    evaluacionesBody.innerHTML = '<p class="text-danger">Ocurrió un error al cargar las evaluaciones.</p>';
+                });
         }
     });
 });

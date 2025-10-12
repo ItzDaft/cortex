@@ -291,6 +291,12 @@ public static function guardarPerfilRevisorExtenso(array $datos): bool {
         
         $stmt = $pdo->prepare($sql);
         return $stmt->execute($datos);
+        $sql_usuario = "UPDATE usuarios SET area_id = :area_id WHERE id = :usuario_id";
+        $stmt_usuario = $pdo->prepare($sql_usuario);
+        $stmt_usuario->execute(['area_id' => $area_id, 'usuario_id' => $datos['usuario_id']]);
+
+        $pdo->commit();
+        return true;
     } catch (PDOException $e) {
         error_log($e->getMessage());
         return false;

@@ -39,13 +39,13 @@ class Extenso {
  */
 public static function obtenerPendientesDeAsignacion(): array {
     $pdo = Database::conectar();
-    // Esta consulta busca extensos 'En Revisión' que aún no tienen ninguna evaluación creada.
+    // CAMBIO: Se añade r.area_id a la consulta SELECT
     $sql = "SELECT e.*, r.titulo, r.area_id
             FROM extensos e
             JOIN resumenes r ON e.resumen_id = r.id
             LEFT JOIN extenso_versiones ev ON e.id = ev.extenso_id
             LEFT JOIN evaluaciones_extensos ee ON ev.id = ee.extenso_version_id
-            WHERE e.estatus_extenso = 'En Revisión' AND ee.id IS NULL
+            WHERE e.estatus_extenso = 'Pendiente de Filtro' AND ee.id IS NULL
             GROUP BY e.id";
     $stmt = $pdo->prepare($sql);
     $stmt->execute();
@@ -122,5 +122,30 @@ public static function obtenerTodosConDetalles(): array {
     $stmt = $pdo->prepare($sql);
     $stmt->execute();
     return $stmt->fetchAll();
+}
+/**
+ * Obtiene extensos pendientes de filtro por área.
+ */
+public static function obtenerPendientesDeFiltroPorArea(int $area_id): array {
+    $pdo = Database::conectar();
+    $sql = "SELECT e.*, r.titulo, ev.archivo_ruta 
+            FROM extensos e 
+            JOIN resumenes r ON e.resumen_id = r.id
+            JOIN extenso_versiones ev ON e.id = ev.extenso_id 
+                AND ev.intento = (SELECT MAX(v.intento) FROM extenso_versiones v WHERE v.extenso_id = e.id)
+            WHERE e.estatus_extenso = 'Pendiente de Filtro'"; //"AND r.area_id = :area_id";
+    $stmt = $pdo->prepare($sql);
+    //$stmt->execute(['area_id' => $area_id]);
+    return $stmt->fetchAll();
+}
+
+/**
+ * Actualiza el estatus y los comentarios de formato de un extenso.
+ */
+public static function actualizarEstatusYComentarios(int $extenso_id, string $estatus, string $comentarios): bool {
+    $pdo = Database::conectar();
+    $sql = "UPDATE extensos SET estatus_extenso = :estatus, comentarios_formato = :comentarios WHERE id = :id";
+    $stmt = $pdo->prepare($sql);
+    return $stmt->execute(['estatus' => $estatus, 'comentarios' => $comentarios, 'id' => $extenso_id]);
 }
 }

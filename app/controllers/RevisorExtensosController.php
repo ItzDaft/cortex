@@ -73,8 +73,8 @@ class RevisorExtensosController {
             'foto_ruta'                 => $foto_ruta
         ];
         
-        if (Usuario::guardarPerfilRevisorExtenso($datos)) {
-            echo json_encode(['mensaje' => 'Perfil completado con éxito. ¡Gracias por tu colaboración!']);
+if (Usuario::guardarPerfilRevisorExtenso($datos, $_POST['area_id'])) {
+                echo json_encode(['mensaje' => 'Perfil completado con éxito. ¡Gracias por tu colaboración!']);
         } else {
             http_response_code(500);
             echo json_encode(['error' => 'No se pudo guardar el perfil.']);
