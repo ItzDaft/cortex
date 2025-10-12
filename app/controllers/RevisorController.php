@@ -166,9 +166,8 @@ public function enviarEvaluacion() {
     $revisionesCompletadas = Revision::buscarCompletadasPorRevisor($revisor['id']);
    $extensosPendientes = Extenso::obtenerPendientesDeFiltroPorArea($revisor['area_id']); 
     $revisoresDisponibles = Usuario::buscarRevisoresExtensosPorArea($revisor['area_id']);
-    $extensosParaMiArea = array_filter($extensosPendientes, function($extenso) use ($revisor) {
-        return isset($extenso['area_id']) && $extenso['area_id'] == $revisor['area_id'];
-    }); 
+    $extensosParaMiArea = Extenso::obtenerPendientesDeFiltroPorArea($revisor['area_id']);
+
     $evaluacionesPorValidar = EvaluacionExtenso::buscarPendientesDeValidacion($revisor['id']);
     $extensosEnConflicto = Extenso::obtenerEnConflictoPorArea($revisor['area_id']);
 

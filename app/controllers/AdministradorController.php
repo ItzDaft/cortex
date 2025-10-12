@@ -104,7 +104,7 @@ public function usuarios() {
 
             Usuario::asignarRol($nuevoUsuario['id'], (int)$datos['rol_id']);
         $asunto = "Bienvenido al Cortex el sistema de revision del CCTI 2025";
-        $linkLogin = rtrim($_SERVER['HTTP_ORIGIN'], '/') . BASE_URL . 'usuario/login';
+        $linkLogin = 'https://ccti2025.fasbit.edu.mx/backend/public/usuario/login';
 
         $cuerpo="";
         if ($rol_id === 8) {

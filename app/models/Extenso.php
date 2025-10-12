@@ -128,14 +128,16 @@ public static function obtenerTodosConDetalles(): array {
  */
 public static function obtenerPendientesDeFiltroPorArea(int $area_id): array {
     $pdo = Database::conectar();
-    $sql = "SELECT e.*, r.titulo, ev.archivo_ruta 
+
+    $sql = "SELECT e.*, r.titulo, r.area_id, ev.archivo_ruta 
             FROM extensos e 
             JOIN resumenes r ON e.resumen_id = r.id
             JOIN extenso_versiones ev ON e.id = ev.extenso_id 
                 AND ev.intento = (SELECT MAX(v.intento) FROM extenso_versiones v WHERE v.extenso_id = e.id)
-            WHERE e.estatus_extenso = 'Pendiente de Filtro'"; //"AND r.area_id = :area_id";
+            WHERE e.estatus_extenso = 'Pendiente de Filtro' AND r.area_id = :area_id";
+
     $stmt = $pdo->prepare($sql);
-    //$stmt->execute(['area_id' => $area_id]);
+    $stmt->execute(['area_id' => $area_id]);
     return $stmt->fetchAll();
 }
 
