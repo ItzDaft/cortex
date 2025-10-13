@@ -25,13 +25,11 @@ class ExtensoController {
         
         $archivo = $_FILES['archivo_extenso'];
         $tipos_permitidos = [
-            'application/pdf', 
-            'application/msword', 
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document' // DOCX
+            'application/pdf'
         ];
 
         if (!in_array(mime_content_type($archivo['tmp_name']), $tipos_permitidos)) {
-            http_response_code(400); echo json_encode(['error' => 'Formato de archivo no permitido. Solo se aceptan PDF, DOC o DOCX.']); return;
+            http_response_code(400); echo json_encode(['error' => 'Formato de archivo no permitido. Solo se aceptan PDF']); return;
         }
 
         $directorioSubida = BACKEND_ROOT . '/uploads/extensos/';
@@ -56,9 +54,7 @@ class ExtensoController {
 public function reenviar($extenso_id) {
     if (!isset($_SESSION['usuario_id'])) { redirect(''); }
 
-    // Obtenemos los datos del extenso y los comentarios de la última revisión
-    $extenso = Extenso::buscarPorId($extenso_id);
-    $evaluaciones = EvaluacionExtenso::obtenerEvaluacionesParaAutor($_SESSION['usuario_id']);
+    $extenso = Extenso::obtenerDetallesParaAutor($extenso_id);
 
     CSRFHelper::generateToken();
     require_once BACKEND_ROOT . '/app/views/layout/header.php';
@@ -78,7 +74,13 @@ public function procesarReenvio($extenso_id) {
     if (!isset($_FILES['archivo_extenso']) || $_FILES['archivo_extenso']['error'] !== UPLOAD_ERR_OK) {
         http_response_code(400); echo json_encode(['error' => 'No se recibió el archivo.']); return;
     }
-
+    $archivo = $_FILES['archivo_extenso'];
+    $tipos_permitidos = ['application/pdf'];
+    if (!in_array(mime_content_type($archivo['tmp_name']), $tipos_permitidos)) {
+    http_response_code(400); 
+    echo json_encode(['error' => 'Formato de archivo no permitido. Solo se aceptan archivos PDF.']); 
+    return;
+}
     $pdo = Database::conectar();
     try {
         $pdo->beginTransaction();

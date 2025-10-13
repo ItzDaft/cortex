@@ -163,4 +163,32 @@ public static function obtenerIdUltimaVersion(int $extenso_id) {
     $stmt->execute(['extenso_id' => $extenso_id]);
     return $stmt->fetchColumn();
 }
+/**
+ * Obtiene los detalles completos de un extenso para el panel del autor,
+ * incluyendo sus versiones y los comentarios de las evaluaciones validadas.
+ * @param int $extenso_id El ID del extenso.
+ * @return mixed Array con los detalles o false.
+ */
+public static function obtenerDetallesParaAutor(int $extenso_id) {
+    $pdo = Database::conectar();
+    $extenso = self::buscarPorId($extenso_id);
+    if (!$extenso) return false;
+
+    // Obtener versiones
+    $stmt_versiones = $pdo->prepare("SELECT * FROM extenso_versiones WHERE extenso_id = :extenso_id ORDER BY intento DESC");
+    $stmt_versiones->execute(['extenso_id' => $extenso_id]);
+    $extenso['versiones'] = $stmt_versiones->fetchAll();
+
+    // Obtener comentarios de evaluaciones validadas
+    $stmt_evaluaciones = $pdo->prepare(
+        "SELECT ee.observaciones_generales, ee.argumento_rechazo 
+         FROM evaluaciones_extensos ee
+         JOIN extenso_versiones ev ON ee.extenso_version_id = ev.id
+         WHERE ev.extenso_id = :extenso_id AND ee.estatus_evaluacion = 'Validada'"
+    );
+    $stmt_evaluaciones->execute(['extenso_id' => $extenso_id]);
+    $extenso['evaluaciones'] = $stmt_evaluaciones->fetchAll();
+
+    return $extenso;
+}
 }
