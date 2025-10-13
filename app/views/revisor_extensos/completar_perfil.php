@@ -86,7 +86,7 @@
         
         fetch(`${baseUrl}revisorExtensos/guardarPerfil`, {
             method: 'POST',
-            body: formData // No se necesita 'headers', el navegador lo pone al usar FormData
+            body: formData 
         })
         .then(response => response.json())
         .then(data => {
@@ -94,7 +94,6 @@
                 mensajeDiv.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
             } else {
                 mensajeDiv.innerHTML = `<div class="alert alert-success">${data.mensaje}</div>`;
-                // Redirigimos al dashboard del revisor después de un momento
                 setTimeout(() => { window.location.href = `${baseUrl}revisorExtensos/dashboard`; }, 2000);
             }
         })

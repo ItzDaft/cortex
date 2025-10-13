@@ -371,7 +371,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const revisoresIds = Array.from(revisoresSeleccionados).map(cb => cb.value);
         const extensoId = document.getElementById('extenso_id_asignar').value;
         const datos = {
-            extenso_version_id: extensoId, // Simulación, ajustar si hay múltiples versiones
+            extenso_id: extensoId, 
             revisores_ids: revisoresIds,
             csrf_token: csrfToken
         };

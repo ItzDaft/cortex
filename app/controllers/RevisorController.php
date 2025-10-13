@@ -264,17 +264,25 @@ public function devolverResumen() {
 /**
  * (API) Asigna un extenso a dos revisores.
  */
+/**
+ * (API) Asigna un extenso a dos revisores.
+ */
 public function asignarRevisoresExtenso() {
     header('Content-Type: application/json');
-    if (!$this->autorizar()) return;
+    if (!$this->autorizar()) return; 
 
     $datos = json_decode(file_get_contents('php://input'), true);
-    if (empty($datos['extenso_version_id']) || empty($datos['revisores_ids']) || count($datos['revisores_ids']) != 2) {
-        http_response_code(400); echo json_encode(['error' => 'Se requiere el ID de la versión del extenso y exactamente dos IDs de revisores.']); return;
+
+    if (empty($datos['extenso_id']) || empty($datos['revisores_ids']) || count($datos['revisores_ids']) != 2) {
+        http_response_code(400); echo json_encode(['error' => 'Se requiere el ID del extenso y exactamente dos IDs de revisores.']); return;
     }
 
-    if (EvaluacionExtenso::asignarRevisores($datos['extenso_version_id'], $datos['revisores_ids'])) {
-        Extenso::actualizarEstatus($datos['extenso_version_id'], 'En Revisión'); 
+    $extenso_version_id = Extenso::obtenerIdUltimaVersion($datos['extenso_id']);
+    if (!$extenso_version_id) {
+        http_response_code(404); echo json_encode(['error' => 'No se encontró una versión del extenso para asignar.']); return;
+    }
+    if (EvaluacionExtenso::asignarRevisores($extenso_version_id, $datos['revisores_ids'])) {
+        Extenso::actualizarEstatus($datos['extenso_id'], 'En Revisión');
         echo json_encode(['mensaje' => 'Revisores asignados con éxito.']);
     } else {
         http_response_code(500);

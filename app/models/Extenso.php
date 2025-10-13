@@ -150,4 +150,17 @@ public static function actualizarEstatusYComentarios(int $extenso_id, string $es
     $stmt = $pdo->prepare($sql);
     return $stmt->execute(['estatus' => $estatus, 'comentarios' => $comentarios, 'id' => $extenso_id]);
 }
+/**
+ * Obtiene el ID de la versión más reciente (último intento) de un extenso.
+ */
+public static function obtenerIdUltimaVersion(int $extenso_id) {
+    $pdo = Database::conectar();
+    $sql = "SELECT id FROM extenso_versiones 
+            WHERE extenso_id = :extenso_id 
+            ORDER BY intento DESC 
+            LIMIT 1";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(['extenso_id' => $extenso_id]);
+    return $stmt->fetchColumn();
+}
 }

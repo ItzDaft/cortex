@@ -271,10 +271,11 @@ public static function buscarRevisorDisponiblePorArea(int $area_id) {
  * @param array $datos Los datos del perfil a guardar.
  * @return bool True si la operación fue exitosa.
  */
-public static function guardarPerfilRevisorExtenso(array $datos): bool {
+public static function guardarPerfilRevisorExtenso(array $datos,int $area_id): bool {
     $pdo = Database::conectar();
     try {
-        $sql = "INSERT INTO revisores_extensos_perfil 
+        $pdo->beginTransaction();
+        $sql_perfil = "INSERT INTO revisores_extensos_perfil 
                     (usuario_id, grado_academico, afiliacion_institucional, cargo_actual, area_especialidad, orcid, google_scholar_id, comprobante_sni_ruta, foto_ruta, acepta_terminos)
                 VALUES
                     (:usuario_id, :grado_academico, :afiliacion_institucional, :cargo_actual, :area_especialidad, :orcid, :google_scholar_id, :comprobante_sni_ruta, :foto_ruta, 1)
@@ -289,8 +290,8 @@ public static function guardarPerfilRevisorExtenso(array $datos): bool {
                     foto_ruta = VALUES(foto_ruta),
                     acepta_terminos = VALUES(acepta_terminos)";
         
-        $stmt = $pdo->prepare($sql);
-        return $stmt->execute($datos);
+        $stmt_perfil = $pdo->prepare($sql_perfil);
+        $stmt_perfil->execute($datos);
         $sql_usuario = "UPDATE usuarios SET area_id = :area_id WHERE id = :usuario_id";
         $stmt_usuario = $pdo->prepare($sql_usuario);
         $stmt_usuario->execute(['area_id' => $area_id, 'usuario_id' => $datos['usuario_id']]);
@@ -298,6 +299,7 @@ public static function guardarPerfilRevisorExtenso(array $datos): bool {
         $pdo->commit();
         return true;
     } catch (PDOException $e) {
+        $pdo->rollBack();
         error_log($e->getMessage());
         return false;
     }
