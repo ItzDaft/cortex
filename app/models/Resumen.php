@@ -242,4 +242,24 @@ public static function obtenerDetallesPorId(int $id) {
     $stmt->execute(['id' => $id]);
     return $stmt->fetch();
 }
+/**
+ * Busca los resúmenes de un autor que ya pueden enviar su artículo extenso.
+ * La condición es: resumen aceptado y pago de publicación aprobado.
+ * @param int $autor_id El ID del autor.
+ * @return array Una lista de resúmenes elegibles.
+ */
+public static function buscarParaEnvioExtenso(int $autor_id): array {
+    $pdo = Database::conectar();
+    $sql = "SELECT r.id as resumen_id, r.titulo, e.id as extenso_id, e.estatus_extenso
+            FROM resumenes r
+            JOIN pagos p ON r.id = p.resumen_id
+            JOIN extensos e ON r.id = e.resumen_id
+            WHERE r.autor_id = :autor_id 
+            AND r.estatus = 'Aceptado' 
+            AND p.estatus_pago = 'Aprobado'";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(['autor_id' => $autor_id]);
+    return $stmt->fetchAll();
+}
 }

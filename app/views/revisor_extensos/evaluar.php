@@ -81,6 +81,8 @@
             </div>
 
             <button type="submit" class="btn btn-success">Guardar Evaluación y Generar PDF</button>
+            <button type="button" id="guardarBorradorBtn" class="btn btn-secondary">Guardar Borrador</button>
+
         </form>
     </div>
 </div>
@@ -89,6 +91,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const baseUrl = '<?php echo BASE_URL; ?>';
     const evaluacionId = <?php echo $evaluacion['id']; ?>;
+    const guardarBorradorBtn = document.getElementById('guardarBorradorBtn');
 
     // --- Elementos del Formulario 1 (Evaluación) ---
     const formEvaluacion = document.getElementById('formEvaluacionExtenso');
@@ -156,6 +159,30 @@ document.addEventListener('DOMContentLoaded', function() {
             // Si hay error, restauramos el botón
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalBtnText;
+        });
+    });
+    // Listener para el botón de guardar borrador
+        guardarBorradorBtn.addEventListener('click', function() {
+        this.disabled = true;
+        this.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Guardando...`;
+
+        // CAMBIO: Ahora se usa FormData para enviar TODOS los campos del formulario
+        const formData = new FormData(document.getElementById('formEvaluacionExtenso'));
+        formData.append('csrf_token', window.csrfToken);
+
+        fetch(`${baseUrl}revisorExtensos/guardarBorradorEvaluacion/${evaluacionId}`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            const alertClass = data.error ? 'alert-danger' : 'alert-success';
+            mensajeDiv.innerHTML = `<div class="alert ${alertClass}">${data.mensaje || data.error}</div>`;
+            setTimeout(() => { mensajeDiv.innerHTML = ''; }, 3000);
+        })
+        .finally(() => {
+            this.disabled = false;
+            this.innerHTML = "Guardar Borrador";
         });
     });
 

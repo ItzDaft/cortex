@@ -207,4 +207,25 @@ public static function obtenerPorExtensoId(int $extenso_id): array {
     $stmt->execute(['extenso_id' => $extenso_id]);
     return $stmt->fetchAll();
 }
+/**
+ * Guarda el estado completo de un formulario de evaluación como borrador.
+ */
+public static function guardarBorrador(int $evaluacion_id, array $datos): bool {
+    $pdo = Database::conectar();
+    $sql = "UPDATE evaluaciones_extensos SET 
+                respuestas_formulario = :respuestas_formulario,
+                observaciones_generales = :observaciones_generales,
+                veredicto = :veredicto,
+                argumento_rechazo = :argumento_rechazo
+            WHERE id = :evaluacion_id";
+
+    $stmt = $pdo->prepare($sql);
+    return $stmt->execute([
+        'respuestas_formulario'   => $datos['respuestas_formulario'],
+        'observaciones_generales' => $datos['observaciones_generales'],
+        'veredicto'               => $datos['veredicto'],
+        'argumento_rechazo'       => $datos['argumento_rechazo'],
+        'evaluacion_id'           => $evaluacion_id
+    ]);
+}
 }

@@ -76,7 +76,10 @@
                         if (in_array('Autor', $_SESSION['usuario_roles']) || in_array('Asistente con Cartel', $_SESSION['usuario_roles'])): ?>
                             <li><a class="dropdown-item" href="<?php echo BASE_URL; ?>resumen/misResumenes"><i class="bi bi-file-earmark-text me-2"></i>Mis Resúmenes</a></li>
                         <?php endif; ?>
-                        
+                        <?php 
+                        if (in_array('Autor', $_SESSION['usuario_roles'])): ?>
+                            <li><a class="dropdown-item" href="<?php echo BASE_URL; ?>resumen/misExtensos"><i class="bi bi-journal-text me-2"></i>Mis Extensos</a></li>
+                        <?php endif; ?>
                         <?php
                         if (in_array('Autor', $_SESSION['usuario_roles']) || in_array('Asistente con Cartel', $_SESSION['usuario_roles']) || in_array('Asistente', $_SESSION['usuario_roles'])):
 

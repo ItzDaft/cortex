@@ -1,6 +1,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>Mis Resúmenes y Artículos</h1>
    <!-- <a href="<?php echo BASE_URL; ?>resumen/crear" class="btn btn-primary"><i class="bi bi-plus-circle-fill me-2"></i>Enviar Nuevo Resumen</a> -->
+    
 </div>
 
 <div class="card">
@@ -57,7 +58,8 @@
 
                                     <?php if (isset($resumen['extenso_id'])): ?>
                                         <?php if ($resumen['estatus_extenso'] == 'No Enviado' && $resumen['estatus'] == 'Aceptado'): ?>
-                                            <a href="<?php echo BASE_URL; ?>extenso/enviar/<?php echo $resumen['extenso_id']; ?>" class="btn btn-sm btn-success"><i class="bi bi-file-earmark-arrow-up-fill"></i> Enviar Extenso</a>
+                                       <!--     <a href="<?php echo BASE_URL; ?>extenso/enviar/<?php echo $resumen['extenso_id']; ?>" class="btn btn-sm btn-success"><i class="bi bi-file-earmark-arrow-up-fill"></i> Enviar Extenso</a> -->
+                                                <a href"https://ccti2025.fasbit.edu.mx/backend/public/resumen/misExtensos" class="btn btn-sm btn-success"><i class="bi bi-journal-text"></i> Gestionar extenso</a>
                                         <?php elseif ($resumen['estatus_extenso'] == 'Aceptado con Correcciones' || ($resumen['estatus_extenso'] == 'Rechazado' && $resumen['extenso_intento'] < 2)): ?>
                                             <a href="<?php echo BASE_URL; ?>extenso/reenviar/<?php echo $resumen['extenso_id']; ?>" class="btn btn-sm btn-warning"><i class="bi bi-pencil-fill"></i> Subir Nueva Versión</a>
                                         <?php endif; ?>

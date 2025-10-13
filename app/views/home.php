@@ -46,6 +46,17 @@
                 </div>
             </div>
             <?php endif; ?>
+            <?php if (in_array('Autor', $_SESSION['usuario_roles'])): ?>
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm action-card">
+                    <div class="card-body text-center d-flex flex-column">
+                        <h5 class="card-title"><i class="bi bi-journal-check text-success"></i><br>Mis Artículos Extensos</h5>
+                        <p class="card-text flex-grow-1">Sube y gestiona las versiones de tus artículos aceptados y pagados.</p>
+                        <a href="<?php echo BASE_URL; ?>resumen/misExtensos" class="btn btn-success mt-auto">Gestionar Extensos</a>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
              <?php if (in_array('Revisor de Extensos', $_SESSION['usuario_roles'])): ?>
             <div class="col-md-6 col-lg-4">
                 <div class="card h-100 shadow-sm action-card">

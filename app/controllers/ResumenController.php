@@ -199,5 +199,20 @@ public function procesarReenvio($id) {
         echo json_encode(['error' => 'No se pudo reenviar el resumen.']);
     }
 }
+/**
+ * Muestra la nueva página dedicada a la gestión de artículos extensos para el autor.
+ */
+public function misExtensos() {
+    if (!isset($_SESSION['usuario_id'])) {
+        redirect('usuario/login');
+    }
+    if (!in_array('Autor', $_SESSION['usuario_roles'])) {
+        redirect(''); 
+    }
+    $resumenesParaExtenso = Resumen::buscarParaEnvioExtenso($_SESSION['usuario_id']);
 
+    require_once BACKEND_ROOT . '/app/views/layout/header.php';
+    require_once BACKEND_ROOT . '/app/views/resumen/misExtensos.php'; // La nueva vista que crearemos
+    require_once BACKEND_ROOT . '/app/views/layout/footer.php';
+}
 }

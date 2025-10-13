@@ -177,4 +177,33 @@ public function subirPdfFirmado($evaluacion_id) {
         http_response_code(500); echo json_encode(['error' => 'No se pudo guardar el archivo firmado.']);
     }
 }
+/**
+ * (API) Guarda el estado completo de un formulario de evaluación como borrador.
+ */
+public function guardarBorradorEvaluacion($evaluacion_id) {
+    header('Content-Type: application/json');
+    if (!isset($_SESSION['usuario_id'])) {
+        http_response_code(403); echo json_encode(['error' => 'Permisos insuficientes.']); return;
+    }
+    $datos_post = $_POST;
+
+    $respuestas = [];
+    for ($i = 1; $i <= 6; $i++) {
+        $respuestas['pregunta_'.$i] = $datos_post['pregunta_'.$i] ?? null;
+    }
+
+    $datos_guardar = [
+        'respuestas_formulario'   => json_encode($respuestas),
+        'observaciones_generales' => $datos_post['observaciones_generales'] ?? null,
+        'veredicto'               => $datos_post['veredicto'] ?? null,
+        'argumento_rechazo'       => $datos_post['argumento_rechazo'] ?? null
+    ];
+
+    if (EvaluacionExtenso::guardarBorrador($evaluacion_id, $datos_guardar)) {
+        echo json_encode(['mensaje' => 'Borrador guardado con éxito.']);
+    } else {
+        http_response_code(500);
+        echo json_encode(['error' => 'No se pudo guardar el borrador.']);
+    }
+}
 }
