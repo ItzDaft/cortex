@@ -388,4 +388,47 @@ public function obtenerEvaluacionesExtenso($extenso_id) {
         echo json_encode([]);
     }
 }
+public function exportarPagos() {
+    if (!$this->autorizar()) return;
+
+    $nombresRoles = $_POST['roles'] ?? [];
+    $estatusPagos = $_POST['estatus'] ?? [];
+
+    if (empty($nombresRoles) && empty($estatusPagos)) {
+        redirect('administrador/pagos'); return;
+    }
+
+    $pagos = Pago::obtenerPagosFiltrados($nombresRoles, $estatusPagos);
+
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=reporte_pagos_filtrado_' . date('Y-m-d') . '.csv');
+
+    $output = fopen('php://output', 'w');
+    fputcsv($output, [
+        '#', 'ID Pago', 'ID Usuario', 'Nombre Usuario', 'Tipo de Usuario', 'Monto', 'Tipo de Pago', 'Estatus'
+    ]);
+
+    $contador = 1;
+    foreach ($pagos as $pago) {
+        $tipoUsuario = $pago['roles'];
+        if (str_contains($pago['roles'], 'Asistente')) {
+            if ($pago['monto'] == 300) $tipoUsuario = 'Asistente Estudiante';
+            elseif ($pago['monto'] == 1000) $tipoUsuario = 'Asistente Profesionista';
+        }
+
+        fputcsv($output, [
+            $contador++,
+            $pago['id'],
+            $pago['usuario_id'],
+            $pago['nombre_completo'],
+            $tipoUsuario,
+            $pago['monto'],
+            $pago['tipo_pago'],
+            $pago['estatus_pago']
+        ]);
+    }
+
+    fclose($output);
+    exit;
+}
 }

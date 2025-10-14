@@ -71,7 +71,9 @@
                             echo '<li><a class="dropdown-item" href="'.BASE_URL.'revisorPagos/dashboard"><i class="bi bi-credit-card me-2"></i>Revisar Pagos</a></li>';
                         }
                         ?>
-
+                        <?php if (in_array('Revisor de Pagos', $_SESSION['usuario_roles'])): ?>
+                        <li><a class="dropdown-item" href="<?php echo BASE_URL; ?>administrador/pagos"><i class="bi bi-journal-album me-2"></i>Gestión General de Pagos</a></li>
+                        <?php endif; ?>
                         <?php 
                         if (in_array('Autor', $_SESSION['usuario_roles']) || in_array('Asistente con Cartel', $_SESSION['usuario_roles'])): ?>
                             <li><a class="dropdown-item" href="<?php echo BASE_URL; ?>resumen/misResumenes"><i class="bi bi-file-earmark-text me-2"></i>Mis Resúmenes</a></li>

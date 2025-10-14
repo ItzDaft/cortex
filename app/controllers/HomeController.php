@@ -2,8 +2,10 @@
 
 class HomeController {
     public function index() {
-        require_once BACKEND_ROOT . '/app/views/layout/header.php';
-        require_once BACKEND_ROOT . '/app/views/home.php';
-        require_once BACKEND_ROOT . '/app/views/layout/footer.php';
+        $root = dirname(dirname(__DIR__)); 
+
+    require_once $root . '/app/views/layout/header.php';
+    require_once $root . '/app/views/home.php';
+    require_once $root . '/app/views/layout/footer.php';
     }
 }

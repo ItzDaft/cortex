@@ -43,7 +43,7 @@
                             <?php if ($extenso['estatus_extenso'] == 'No Enviado'): ?>
                                 <a href="<?php echo BASE_URL; ?>extenso/enviar/<?php echo $extenso['id']; ?>" class="btn btn-success"><i class="bi bi-file-earmark-arrow-up-fill"></i> Enviar 1ª Versión</a>
                             <?php elseif ($extenso['estatus_extenso'] == 'Aceptado con Correcciones' || $extenso['estatus_extenso'] == 'Rechazado' || $extenso['estatus_extenso'] == 'Rechazado por Formato'): ?>
-                                <?php if (count($extenso['versiones']) < 2): // Limita a 2 envíos totales ?>
+                                <?php if (count($extenso['versiones']) < 5): // Limita a 5 envíos totales ?>
                                     <a href="<?php echo BASE_URL; ?>extenso/reenviar/<?php echo $extenso['id']; ?>" class="btn btn-warning"><i class="bi bi-pencil-fill"></i> Subir Nueva Versión</a>
                                 <?php else: ?>
                                     <p class="text-danger">Ya has alcanzado el número máximo de envíos para este artículo.</p>

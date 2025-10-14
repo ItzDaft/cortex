@@ -319,4 +319,49 @@ public static function obtenerEstadisticasPorTipo(): array {
     $stmt = $pdo->query($sql);
     return $stmt->fetchAll();
 }
+/**
+ * Obtiene todos los pagos con detalles, filtrados por uno o más roles de usuario.
+ * @param array $nombresRoles Un array con los nombres de los roles a incluir.
+ * @return array Una lista de pagos.
+ */
+/**
+ * Obtiene pagos con detalles, filtrados por roles y/o estatus.
+ * @param array $nombresRoles Array con nombres de roles a incluir.
+ * @param array $estatusPagos Array con los estatus a incluir.
+ * @return array Una lista de pagos.
+ */
+/**
+ * Obtiene pagos con detalles, filtrados por roles y/o estatus.
+ * @param array $nombresRoles Array con nombres de roles a incluir.
+ * @param array $estatusPagos Array con los estatus a incluir.
+ * @return array Una lista de pagos.
+ */
+public static function obtenerPagosFiltrados(array $nombresRoles, array $estatusPagos): array {
+    $pdo = Database::conectar();
+
+    $sql = "SELECT DISTINCT p.*, u.nombre_completo, 
+                (SELECT GROUP_CONCAT(r.nombre_rol) FROM roles r JOIN usuario_roles ur ON r.id = ur.rol_id WHERE ur.usuario_id = u.id) as roles
+            FROM pagos p
+            JOIN usuarios u ON p.usuario_id = u.id
+            JOIN usuario_roles ur ON u.id = ur.usuario_id
+            JOIN roles r ON ur.rol_id = r.id
+            WHERE 1=1";
+
+    $params = [];
+    if (!empty($nombresRoles)) {
+        $rolesPlaceholders = implode(',', array_fill(0, count($nombresRoles), '?'));
+        $sql .= " AND r.nombre_rol IN ($rolesPlaceholders)";
+        $params = array_merge($params, $nombresRoles);
+    }
+    if (!empty($estatusPagos)) {
+        $estatusPlaceholders = implode(',', array_fill(0, count($estatusPagos), '?'));
+        $sql .= " AND p.estatus_pago IN ($estatusPlaceholders)";
+        $params = array_merge($params, $estatusPagos);
+    }
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
 }

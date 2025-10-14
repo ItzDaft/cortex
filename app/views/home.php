@@ -120,6 +120,9 @@
                 <?php if (in_array('Revisor de Pagos', $_SESSION['usuario_roles']) || in_array('Administrador', $_SESSION['usuario_roles']) || in_array('Coordinador', $_SESSION['usuario_roles'])): ?>
                     <div class="col-md-6 col-lg-4"><a href="<?php echo BASE_URL; ?>revisorPagos/dashboard" class="btn btn-dark btn-lg w-100 p-3"><i class="bi bi-credit-card me-2"></i>Revisar Pagos</a></div>
                 <?php endif; ?>
+                <?php if (in_array('Administrador', $_SESSION['usuario_roles']) || in_array('Revisor de Pagos', $_SESSION['usuario_roles'])): ?>
+                    <div class="col-md-6 col-lg-4"><a href="<?php echo BASE_URL; ?>administrador/pagos" class="btn btn-dark btn-lg w-100 p-3"><i class="bi bi-journal-album me-2"></i>Gestión General de Pagos</a></div>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
     <?php endif; ?>
