@@ -114,7 +114,7 @@ if (isset($revisor['area_id'])) {
         </div>
     </div>
 </div>
-
+<?php /* --- INICIA SECCIÓN COMENTADA ---
 <h3 class="mt-5">Artículos Extensos Pendientes de Filtro</h3>
 <div class="card">
     <div class="card-body">
@@ -275,6 +275,8 @@ if (isset($revisor['area_id'])) {
     </div>
   </div>
 </div>
+--- FIN SECCIÓN COMENTADA --- */ ?>
+
 <!-- 
 <script>
     <?php /* --- INICIA CÓDIGO COMENTADO ---

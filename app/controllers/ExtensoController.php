@@ -87,7 +87,6 @@ public function procesarReenvio($extenso_id) {
 
         EvaluacionExtenso::eliminarEvaluacionesAnteriores($extenso_id);
 
-        // 2. Sube el nuevo archivo
         $directorioSubida = BACKEND_ROOT . '/uploads/extensos/';
         $archivo = $_FILES['archivo_extenso'];
         $extension = pathinfo($archivo['name'], PATHINFO_EXTENSION);
@@ -99,7 +98,6 @@ public function procesarReenvio($extenso_id) {
             throw new Exception('No se pudo guardar el archivo.');
         }
 
-        // 3. Registra la nueva versión y actualiza el estado del extenso a 'En Revisión'
         Extenso::agregarVersion($extenso_id, $nuevoIntento, $nombreUnico);
         Extenso::actualizarEstatus($extenso_id, 'Pendiente de Filtro');
         $pdo->commit();

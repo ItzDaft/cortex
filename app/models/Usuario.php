@@ -317,14 +317,18 @@ public static function perfilRevisorEstaCompleto(int $usuario_id): bool {
     return $stmt->fetchColumn() > 0;
 }
 /**
- * Busca Revisores de Extensos de un área específica con su carga de trabajo actual.
+ * Busca Revisores de Extensos de un área específica con su perfil y carga de trabajo.
  */
 public static function buscarRevisoresExtensosPorArea(int $area_id): array {
     $pdo = Database::conectar();
-    $sql = "SELECT u.id, u.nombre_completo, COUNT(ee.id) as carga_actual
+    $sql = "SELECT 
+                u.id, u.nombre_completo, u.correo,
+                p.grado_academico, p.area_especialidad,
+                COUNT(ee.id) as carga_actual
             FROM usuarios u
             JOIN usuario_roles ur ON u.id = ur.usuario_id
             JOIN roles r ON ur.rol_id = r.id
+            LEFT JOIN revisores_extensos_perfil p ON u.id = p.usuario_id
             LEFT JOIN evaluaciones_extensos ee ON u.id = ee.revisor_id AND ee.estatus_evaluacion IN ('Pendiente de Firma', 'Pendiente de Validación')
             WHERE r.nombre_rol = 'Revisor de Extensos' AND u.area_id = :area_id AND u.activo = 1
             GROUP BY u.id

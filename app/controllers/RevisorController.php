@@ -164,12 +164,7 @@ public function enviarEvaluacion() {
     $resumenesDisponibles = Resumen::buscarDisponiblesPorArea($revisor['area_id'], $revisor['id']);
     $revisionesAsignadas = Revision::buscarAsignadasPorRevisor($revisor['id']);
     $revisionesCompletadas = Revision::buscarCompletadasPorRevisor($revisor['id']);
-   $extensosPendientes = Extenso::obtenerPendientesDeFiltroPorArea($revisor['area_id']); 
-    $revisoresDisponibles = Usuario::buscarRevisoresExtensosPorArea($revisor['area_id']);
-    $extensosParaMiArea = Extenso::obtenerPendientesDeFiltroPorArea($revisor['area_id']);
-
-    $evaluacionesPorValidar = EvaluacionExtenso::buscarPendientesDeValidacion($revisor['id']);
-    $extensosEnConflicto = Extenso::obtenerEnConflictoPorArea($revisor['area_id']);
+  
 
     require_once BACKEND_ROOT . '/app/views/layout/header.php';
     require_once BACKEND_ROOT . '/app/views/revisor/dashboard.php';
@@ -386,13 +381,93 @@ public function devolverExtensoPorFormato() {
 
     $datos = json_decode(file_get_contents('php://input'), true);
     if (empty($datos['extenso_id']) || empty($datos['comentarios'])) {
-        http_response_code(400); echo json_encode(['error' => 'Se requiere el ID del extenso y los comentarios.']); return;
+        http_response_code(400);
+        echo json_encode(['error' => 'Se requiere el ID del extenso y los comentarios.']);
+        return;
     }
 
-    Extenso::actualizarEstatusYComentarios($datos['extenso_id'], 'Rechazado por Formato', $datos['comentarios']); // Necesitaremos este nuevo método
+    if (Extenso::actualizarEstatusYComentarios($datos['extenso_id'], 'Rechazado por Formato', $datos['comentarios'])) {
+    $detalles = Extenso::obtenerDetallesParaNotificacion($datos['extenso_id']);
+    if ($detalles) {
+            $asunto = "Tu extenso requiere correcciones de formato";
+            $cuerpo = "<h1>Hola, {$detalles['autor_nombre']}</h1>
+                       <p>Tu artículo extenso titulado '<strong>{$detalles['titulo']}</strong>' ha sido revisado por el Coordinador de Área y requiere correcciones de formato.</p>
+                       <p><strong>Comentarios del coordinador:</strong></p>
+                       <blockquote style='border-left: 4px solid #ccc; padding-left: 15px;'>
+                           <p><em>" . htmlspecialchars($datos['comentarios']) . "</em></p>
+                       </blockquote>
+                       <p>Por favor, inicia sesión en la plataforma Cortex para subir una nueva versión corregida.</p>";
 
-    // (Lógica opcional para notificar al autor por correo)
+            MailHelper::enviarCorreo($detalles['autor_correo'], $detalles['autor_nombre'], $asunto, $cuerpo);
+        }
 
-    echo json_encode(['mensaje' => 'Extenso devuelto al autor con observaciones.']);
+        echo json_encode(['mensaje' => 'Extenso devuelto al autor con observaciones.']);
+    } else {
+        http_response_code(500);
+        echo json_encode(['error' => 'No se pudo devolver el extenso.']);
+    }
+}
+/**
+ * Muestra el nuevo panel dedicado a la gestión de artículos extensos.
+ */
+public function gestionExtensos() {
+    if (!$this->autorizar()) return;
+
+    CSRFHelper::generateToken();
+
+    $coordinadorArea = Usuario::buscarPorId($_SESSION['usuario_id']);
+    if (empty($coordinadorArea['area_id'])) {
+        echo "Error: No tienes un área de especialización asignada.";
+        return;
+    }
+    $extensosEnRevision = Extenso::obtenerEnRevisionPorArea($coordinadorArea['area_id']);
+
+    $extensosParaFiltro = Extenso::obtenerPendientesDeFiltroPorArea($coordinadorArea['area_id']);
+
+    $revisoresDisponibles = Usuario::buscarRevisoresExtensosPorArea($coordinadorArea['area_id']);
+
+
+    require_once BACKEND_ROOT . '/app/views/layout/header.php';
+    require_once BACKEND_ROOT . '/app/views/revisor/gestion_extensos.php'; 
+    require_once BACKEND_ROOT . '/app/views/layout/footer.php';
+}
+/**
+ * (API) Obtiene los IDs de los revisores actualmente asignados a un extenso.
+ */
+public function obtenerRevisoresAsignados($extenso_id) {
+    header('Content-Type: application/json');
+    if (!$this->autorizar()) return;
+
+    $extenso_version_id = Extenso::obtenerIdUltimaVersion((int)$extenso_id);
+    if ($extenso_version_id) {
+        $revisores_ids = EvaluacionExtenso::obtenerIdsRevisoresAsignados($extenso_version_id);
+        echo json_encode($revisores_ids);
+    } else {
+        echo json_encode([]);
+    }
+}
+
+/**
+ * (API) Actualiza los revisores asignados a un extenso.
+ */
+public function actualizarRevisoresExtenso() {
+    header('Content-Type: application/json');
+    if (!$this->autorizar()) return;
+
+    $datos = json_decode(file_get_contents('php://input'), true);
+    if (empty($datos['extenso_id']) || !isset($datos['revisores_ids']) || count($datos['revisores_ids']) != 2) {
+        http_response_code(400); echo json_encode(['error' => 'Se requiere el ID del extenso y exactamente dos IDs de revisores.']); return;
+    }
+
+    $extenso_version_id = Extenso::obtenerIdUltimaVersion($datos['extenso_id']);
+    if (!$extenso_version_id) {
+        http_response_code(404); echo json_encode(['error' => 'No se encontró una versión del extenso para actualizar.']); return;
+    }
+
+    if (EvaluacionExtenso::actualizarRevisores($extenso_version_id, $datos['revisores_ids'])) {
+        echo json_encode(['mensaje' => 'Revisores actualizados con éxito.']);
+    } else {
+        http_response_code(500); echo json_encode(['error' => 'No se pudo actualizar la asignación.']);
+    }
 }
 }

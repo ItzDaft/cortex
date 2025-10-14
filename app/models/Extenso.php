@@ -191,4 +191,50 @@ public static function obtenerDetallesParaAutor(int $extenso_id) {
 
     return $extenso;
 }
+/**
+ * Obtiene los extensos que ya fueron asignados y están 'En Revisión' en un área específica.
+ * @param int $area_id El ID del área del coordinador.
+ * @return array Una lista de extensos en revisión.
+ */
+public static function obtenerEnRevisionPorArea(int $area_id): array {
+    $pdo = Database::conectar();
+    // Esta consulta busca los extensos, se une a las evaluaciones para encontrar los nombres de los revisores
+    // y los agrupa para mostrarlos en una sola fila.
+    $sql = "SELECT
+                e.id,
+                r.titulo,
+                GROUP_CONCAT(u.nombre_completo SEPARATOR ', ') as revisores_asignados
+            FROM extensos e
+            JOIN resumenes r ON e.resumen_id = r.id
+            LEFT JOIN extenso_versiones ev ON e.id = ev.extenso_id
+            LEFT JOIN evaluaciones_extensos ee ON ev.id = ee.extenso_version_id
+            LEFT JOIN usuarios u ON ee.revisor_id = u.id
+            WHERE e.estatus_extenso = 'En Revisión' AND r.area_id = :area_id
+            GROUP BY e.id
+            ORDER BY e.id DESC";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(['area_id' => $area_id]);
+    return $stmt->fetchAll();
+}
+/**
+ * Obtiene los detalles de un extenso y su autor para enviar notificaciones.
+ * @param int $extenso_id El ID del extenso.
+ * @return mixed Array con los datos o false.
+ */
+public static function obtenerDetallesParaNotificacion(int $extenso_id) {
+    $pdo = Database::conectar();
+    $sql = "SELECT 
+                r.titulo, 
+                u.nombre_completo as autor_nombre, 
+                u.correo as autor_correo
+            FROM extensos e
+            JOIN resumenes r ON e.resumen_id = r.id
+            JOIN usuarios u ON r.autor_id = u.id
+            WHERE e.id = :extenso_id";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(['extenso_id' => $extenso_id]);
+    return $stmt->fetch();
+}
 }

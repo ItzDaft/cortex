@@ -57,6 +57,17 @@
                 </div>
             </div>
             <?php endif; ?>
+            <?php if (in_array('Coordinador de Area', $_SESSION['usuario_roles'])): ?>
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm action-card">
+                    <div class="card-body text-center d-flex flex-column">
+                        <h5 class="card-title"><i class="bi bi-person-workspace text-info"></i><br>Gestión de Extensos</h5>
+                        <p class="card-text flex-grow-1">Administra los artículos extensos de tu área, asigna revisores y valida el formato de los envíos.</p>
+                        <a href="<?php echo BASE_URL; ?>revisor/gestionExtensos" class="btn btn-info text-white mt-auto">Administrar Extensos</a>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
              <?php if (in_array('Revisor de Extensos', $_SESSION['usuario_roles'])): ?>
             <div class="col-md-6 col-lg-4">
                 <div class="card h-100 shadow-sm action-card">

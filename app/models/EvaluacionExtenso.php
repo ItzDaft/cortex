@@ -228,4 +228,37 @@ public static function guardarBorrador(int $evaluacion_id, array $datos): bool {
         'evaluacion_id'           => $evaluacion_id
     ]);
 }
+/**
+ * Obtiene los IDs de los revisores actualmente asignados a una versión de extenso.
+ */
+public static function obtenerIdsRevisoresAsignados(int $extenso_version_id): array {
+    $pdo = Database::conectar();
+    $sql = "SELECT revisor_id FROM evaluaciones_extensos WHERE extenso_version_id = :id";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(['id' => $extenso_version_id]);
+    return $stmt->fetchAll(PDO::FETCH_COLUMN);
+}
+
+/**
+ * Actualiza los revisores de una versión de extenso (borra los anteriores e inserta los nuevos).
+ */
+public static function actualizarRevisores(int $extenso_version_id, array $revisores_ids): bool {
+    $pdo = Database::conectar();
+    try {
+        $pdo->beginTransaction();
+        $stmt_delete = $pdo->prepare("DELETE FROM evaluaciones_extensos WHERE extenso_version_id = :id");
+        $stmt_delete->execute(['id' => $extenso_version_id]);
+
+        $stmt_insert = $pdo->prepare("INSERT INTO evaluaciones_extensos (extenso_version_id, revisor_id) VALUES (:version_id, :revisor_id)");
+        foreach ($revisores_ids as $revisor_id) {
+            $stmt_insert->execute(['version_id' => $extenso_version_id, 'revisor_id' => (int)$revisor_id]);
+        }
+        $pdo->commit();
+        return true;
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        error_log($e->getMessage());
+        return false;
+    }
+}
 }
