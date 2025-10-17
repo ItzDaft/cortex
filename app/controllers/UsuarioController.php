@@ -179,17 +179,14 @@ public function cambiarContrasena() {
     $datos = json_decode(file_get_contents('php://input'), true);
     $usuario_id = $_SESSION['usuario_id'];
 
-    // Obtenemos los datos del usuario para verificar la contraseña actual
     $usuario = Usuario::buscarPorId($usuario_id);
 
-    // Verificamos que la contraseña actual sea correcta
     if (!$usuario || !password_verify($datos['contrasena_actual'], $usuario['contrasena'])) {
         http_response_code(401);
         echo json_encode(['error' => 'La contraseña actual es incorrecta.']);
         return;
     }
     
-    // Cambiamos la contraseña
     if (Usuario::cambiarContrasena($usuario_id, $datos['nueva_contrasena'])) {
         echo json_encode(['mensaje' => 'Contraseña cambiada con éxito.']);
     } else {

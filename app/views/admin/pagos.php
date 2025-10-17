@@ -78,6 +78,32 @@ foreach (($pagosPorEstatus['Pendiente'] ?? []) as $pago) {
 }
 ?>
 
+<?php
+// Helper: determina el tipo de participante a mostrar en la tabla
+function tipoParticipanteFromPago($pago) {
+    $roles = $pago['roles'] ?? '';
+    $monto = $pago['monto'] ?? null;
+
+    // Priorizar roles explícitos
+    if (is_string($roles)) {
+        if (strpos($roles, 'Autor') !== false) return htmlspecialchars('Autor');
+        if (strpos($roles, 'Asistente con Cartel') !== false) return htmlspecialchars('Asistente con Cartel');
+        if (strpos($roles, 'Revisor') !== false) return htmlspecialchars('Revisor');
+        if (strpos($roles, 'Revisor de Pagos') !== false) return htmlspecialchars('Revisor de Pagos');
+    }
+
+    // Si es asistente, usar monto para distinguir estudiante/profesionista
+    if (is_numeric($monto)) {
+        if ($monto == 300) return htmlspecialchars('Asistente Estudiante');
+        if ($monto == 1000) return htmlspecialchars('Asistente Profesionista');
+    }
+
+    // Fallback: si hay rol(s) devolver la cadena; sino devolver '-' 
+    if (!empty($roles)) return htmlspecialchars($roles);
+    return '-';
+}
+?>
+
 <h3 class="mt-5">Pagos Pendientes de Revisión (con comprobante)</h3>
 <div class="card">
     <div class="card-body">
@@ -98,24 +124,8 @@ foreach (($pagosPorEstatus['Pendiente'] ?? []) as $pago) {
                                 <td><?php echo $pago['id']; ?></td>
                                 <td><?php echo htmlspecialchars($pago['nombre_completo']); ?></td>
                                 <td>$<?php echo number_format($pago['monto'], 2); ?></td>
-<td>
-    <?php
-        $tipoParticipacion = '';
-        // Se usa str_contains para verificar si la cadena de roles contiene el rol específico.
-        if (str_contains($pago['roles'], 'Autor')) {
-            $tipoParticipacion = 'Extenso';
-        } elseif (str_contains($pago['roles'], 'Asistente con Cartel')) {
-            $tipoParticipacion = 'Póster';
-        } elseif (str_contains($pago['roles'], 'Asistente')) {
-            if ($pago['monto'] == 300) {
-                $tipoParticipacion = 'Asistente Estudiante';
-            } elseif ($pago['monto'] == 1000) {
-                $tipoParticipacion = 'Asistente Profesionista';
-            }
-        }
-        echo htmlspecialchars($tipoParticipacion ?: $pago['tipo_pago']);
-    ?>
-</td>                                <td>
+                                <td><?php echo tipoParticipanteFromPago($pago); ?></td>
+                                <td>
                                     <a href="<?php echo BASE_URL; ?>archivo/ver/pagos/<?php echo $pago['comprobante_ruta']; ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
                                         Ver Archivo
                                     </a>
@@ -136,7 +146,7 @@ foreach (($pagosPorEstatus['Pendiente'] ?? []) as $pago) {
             <table class="table table-hover align-middle">
                 <thead>
                     <tr>
-                        <th>#</th><th>ID Pago</th><th>Usuario</th><th>Monto</th><th>Tipo</th><th>Comprobante</th>
+                        <th>#</th><th>ID Pago</th><th>Usuario</th><th>Monto</th><th>Tipo de Participante</th><th>Comprobante</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -149,7 +159,7 @@ foreach (($pagosPorEstatus['Pendiente'] ?? []) as $pago) {
                                 <td><?php echo $pago['id']; ?></td>
                                 <td><?php echo htmlspecialchars($pago['nombre_completo']); ?></td>
                                 <td>$<?php echo number_format($pago['monto'], 2); ?></td>
-                                <td><?php echo htmlspecialchars($pago['tipo_pago']); ?></td>
+                                <td><?php echo tipoParticipanteFromPago($pago); ?></td>
                                 <td><small class="text-muted">N/A</small></td>
                             </tr>
                         <?php endforeach; ?>
@@ -176,7 +186,7 @@ foreach ($ordenDeEstatus as $estatus => $titulo):
             <table class="table table-hover align-middle">
                 <thead>
                     <tr>
-                        <th>#</th><th>ID Pago</th><th>Usuario</th><th>Monto</th><th>Tipo</th><th>Comprobante</th>
+                        <th>#</th><th>ID Pago</th><th>Usuario</th><th>Monto</th><th>Tipo de Participante</th><th>Comprobante</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -189,7 +199,7 @@ foreach ($ordenDeEstatus as $estatus => $titulo):
                                 <td><?php echo $pago['id']; ?></td>
                                 <td><?php echo htmlspecialchars($pago['nombre_completo']); ?></td>
                                 <td>$<?php echo number_format($pago['monto'], 2); ?></td>
-                                <td><?php echo htmlspecialchars($pago['tipo_pago']); ?></td>
+                                <td><?php echo tipoParticipanteFromPago($pago); ?></td>
                                 <td>
                                     <?php if (!empty($pago['comprobante_ruta'])): ?>
                                         <a href="<?php echo BASE_URL; ?>archivo/ver/pagos/<?php echo $pago['comprobante_ruta']; ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
@@ -218,6 +228,8 @@ foreach ($ordenDeEstatus as $estatus => $titulo):
       <div class="modal-body">
         <p>Selecciona los roles que deseas incluir en el reporte CSV.</p>
         <form id="exportarPagosForm" action="<?php echo BASE_URL; ?>administrador/exportarPagos" method="POST">
+            <?php echo CSRFHelper::getTokenInput(); ?>
+            <input type="hidden" name="query" id="export-query" value="">
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" name="roles[]" value="Autor" id="rol-export-autor" checked>
                 <label class="form-check-label" for="rol-export-autor">Autores (Extenso)</label>
@@ -238,7 +250,7 @@ foreach ($ordenDeEstatus as $estatus => $titulo):
             </div>
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" name="estatus[]" value="Pendiente" id="estatus-export-pendiente" checked>
-                <label class="form-check-label" for="estatus-export-pendiente">Pendientes (todos)</label>
+                <label class="form-check-label" for="estatus-export-pendiente">Pendientes</label>
             </div>
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" name="estatus[]" value="Rechazado" id="estatus-export-rechazado" checked>
@@ -255,19 +267,24 @@ foreach ($ordenDeEstatus as $estatus => $titulo):
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // --- LÓGICA EXISTENTE PARA LA BÚSQUEDA EN TIEMPO REAL ---
     const buscador = document.getElementById('buscador-pagos');
     if (buscador) {
         buscador.addEventListener('input', function() {
             const filtro = this.value.trim().toLowerCase();
+            const mostrarTodo = filtro === '';
             document.querySelectorAll('table tbody').forEach(function(tbody) {
                 tbody.querySelectorAll('tr').forEach(function(row) {
-                    if (row.children.length === 1 && row.textContent.includes('No hay pagos')) {
-                        row.style.display = filtro ? 'none' : '';
+                    if (row.children.length === 1 && row.textContent.match(/no hay pagos/i)) {
+                        row.style.display = mostrarTodo ? '' : 'none';
                         return;
                     }
-                    const usuario = row.children[1]?.textContent.toLowerCase() || '';
-                    if (usuario.includes(filtro)) {
+
+                    const idCell = row.children[1];
+                    const nombreCell = row.children[2];
+                    const idText = idCell ? idCell.textContent.trim().toLowerCase() : '';
+                    const nombreText = nombreCell ? nombreCell.textContent.trim().toLowerCase() : '';
+
+                    if (mostrarTodo || idText.includes(filtro) || nombreText.includes(filtro)) {
                         row.style.display = '';
                     } else {
                         row.style.display = 'none';
@@ -283,9 +300,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         exportForm.addEventListener('submit', function(event) {
             event.preventDefault();
+            const currentQuery = (document.getElementById('buscador-pagos') || { value: '' }).value || '';
+            document.getElementById('export-query').value = currentQuery;
 
             const formData = new FormData(this);
-            formData.append('csrf_token', window.csrfToken); 
 
             fetch(this.action, {
                 method: 'POST',

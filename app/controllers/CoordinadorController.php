@@ -41,7 +41,7 @@ class CoordinadorController {
   
 public function validarArea() {
     header('Content-Type: application/json');
-    if (!$this->autorizar()) return; // Se asume que tienes un método autorizarApi()
+    if (!$this->autorizar()) return; 
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         http_response_code(405);
@@ -57,8 +57,6 @@ public function validarArea() {
         return;
     }
     
-    // --- NUEVA LÓGICA DE ASIGNACIÓN AUTOMÁTICA ---
-    // 1. Encontrar un Coordinador de Área disponible para el área seleccionada
     $coordinadorDeArea = Usuario::buscarRevisorDisponiblePorArea($datos['area_id']);
 
     if (!$coordinadorDeArea) {
@@ -67,17 +65,14 @@ public function validarArea() {
         return;
     }
 
-    // 2. Usar una transacción para asegurar la integridad de los datos
     $pdo = Database::conectar();
     try {
         $pdo->beginTransaction();
 
-        // 2a. Actualizar el estatus y el área del resumen
         $sql_update = "UPDATE resumenes SET area_id = :area_id, estatus = 'En Revision' WHERE id = :resumen_id";
         $stmt_update = $pdo->prepare($sql_update);
         $stmt_update->execute(['area_id' => $datos['area_id'], 'resumen_id' => $datos['resumen_id']]);
 
-        // 2b. Crear la nueva revisión (asignación)
         $revision = new Revision();
         $revision->resumen_id = $datos['resumen_id'];
         $revision->revisor_id = $coordinadorDeArea['id'];

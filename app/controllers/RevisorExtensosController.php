@@ -23,9 +23,7 @@ class RevisorExtensosController {
             http_response_code(403); echo json_encode(['error' => 'Permisos insuficientes.']); return;
         }
         
-        // --- INICIA LÓGICA DE VALIDACIÓN Y SUBIDA DE ARCHIVOS ---
         
-        // Validación de campos de texto
         $campos_requeridos = ['grado_academico', 'afiliacion_institucional', 'cargo_actual', 'area_especialidad'];
         foreach ($campos_requeridos as $campo) {
             if (empty($_POST[$campo])) {
@@ -38,7 +36,6 @@ class RevisorExtensosController {
         $directorio_revisores = BACKEND_ROOT . '/uploads/revisores_perfil/';
         if (!is_dir($directorio_revisores)) { mkdir($directorio_revisores, 0777, true); }
 
-        // Procesar comprobante SNI (si se subió)
         if (isset($_FILES['comprobante_sni']) && $_FILES['comprobante_sni']['error'] === UPLOAD_ERR_OK) {
             $archivo_sni = $_FILES['comprobante_sni'];
             if ($archivo_sni['type'] !== 'application/pdf') {
@@ -49,7 +46,6 @@ class RevisorExtensosController {
             move_uploaded_file($archivo_sni['tmp_name'], $directorio_revisores . $comprobante_sni_ruta);
         }
 
-        // Procesar foto de perfil (si se subió)
         if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
             $archivo_foto = $_FILES['foto'];
             $tipos_permitidos = ['image/jpeg', 'image/png'];

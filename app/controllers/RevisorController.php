@@ -309,7 +309,6 @@ public function validarEvaluacionFirmada() {
             $numEvaluaciones = count($evaluacionesValidadas);
             $estatus_final_extenso = '';
 
-            // Solo se toma una decisión si hay 2 o 3 evaluaciones validadas
             if ($numEvaluaciones >= 2) {
                 $veredictos = array_column($evaluacionesValidadas, 'veredicto');
                 $conteos = array_count_values($veredictos);
@@ -317,8 +316,7 @@ public function validarEvaluacionFirmada() {
                 $conCorrecciones = $conteos['Favorable con Correcciones'] ?? 0;
                 $rechazados = $conteos['No Publicable'] ?? 0;
 
-                // --- LÓGICA DE DECISIÓN FINAL (INCLUYE DESEMPATE) ---
-                if ($numEvaluaciones >= 3) { // Si hay 3 o más, la mayoría gana
+                if ($numEvaluaciones >= 3) {
                     if ($rechazados >= 2) $estatus_final_extenso = 'Rechazado';
                     elseif ($aceptados >= 2) $estatus_final_extenso = 'Aceptado Final';
                     elseif ($conCorrecciones >= 2) $estatus_final_extenso = 'Aceptado con Correcciones';
@@ -333,7 +331,6 @@ public function validarEvaluacionFirmada() {
                     $extenso = Extenso::buscarPorVersionId($evaluacionActual['extenso_version_id']);
                     Extenso::actualizarEstatus($extenso['id'], $estatus_final_extenso);
                     
-                    // Notificar al autor
                     $autor = Usuario::buscarPorId($extenso['autor_id']);
                     MailHelper::enviarCorreo(
                         $autor['correo'], 
@@ -364,7 +361,6 @@ public function asignarTercerRevisor() {
     }
 
     if (EvaluacionExtenso::asignarTercerRevisor($datos['extenso_version_id'], $datos['revisor_id'])) {
-        // Actualizamos el estado del extenso para que salga de la cola de conflictos
         Extenso::actualizarEstatus($datos['extenso_version_id'], 'En Revisión');
         echo json_encode(['mensaje' => 'Tercer revisor asignado con éxito.']);
     } else {

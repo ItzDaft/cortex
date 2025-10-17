@@ -2,19 +2,31 @@
 
 class AdministradorController {
 
- private function autorizar(): bool {
+    /**
+     * Autoriza el acceso verificando sesión y roles.
+     * Si se pasa un array de roles permitidos, cualquiera de esos roles permitirá el acceso.
+     * Caso contrario se requiere el rol 'Administrador'.
+     * @param array|null $rolesPermitidos
+     * @return bool
+     */
+    private function autorizar(?array $rolesPermitidos = null): bool {
         if (!isset($_SESSION['usuario_id'])) {
             http_response_code(401);
             echo json_encode(['error' => 'Acceso no autorizado.']);
             return false;
         }
         $rolesUsuario = Usuario::obtenerRoles($_SESSION['usuario_id']);
-        if (!in_array('Administrador', $rolesUsuario) || !in_array('Revisor de Pagos', $rolesUsuario)) {
-            http_response_code(403);
-            echo json_encode(['error' => 'Permisos insuficientes.']);
-            return false;
+        if (empty($rolesPermitidos)) {
+            $rolesPermitidos = ['Administrador'];
         }
-        return true;
+        foreach ($rolesPermitidos as $rol) {
+            if (in_array($rol, $rolesUsuario)) {
+                return true;
+            }
+        }
+        http_response_code(403);
+        echo json_encode(['error' => 'Permisos insuficientes.']);
+        return false;
     }
         public function dashboard() {
         if (!$this->autorizar()) return;
@@ -259,7 +271,9 @@ public function actualizarAreaResumen($id) {
  * Muestra la página de gestión de todos los pagos.
  */
 public function pagos() {
-    if (!$this->autorizar()) return;
+    if (!$this->autorizar(['Administrador', 'Revisor de Pagos'])) return;
+    // Generar token CSRF para el formulario de exportación
+    CSRFHelper::generateToken();
 
     $todosLosPagos = Pago::obtenerTodosConDetalles();
     $estadisticas = Pago::obtenerEstadisticas();
@@ -390,41 +404,79 @@ public function obtenerEvaluacionesExtenso($extenso_id) {
 }
 public function exportarPagos() {
     if (!$this->autorizar()) return;
-
     $nombresRoles = $_POST['roles'] ?? [];
     $estatusPagos = $_POST['estatus'] ?? [];
+    $query = trim($_POST['query'] ?? '');
 
+    // Si no se especifican filtros, obtenemos todos los pagos
     if (empty($nombresRoles) && empty($estatusPagos)) {
-        redirect('administrador/pagos'); return;
+        $pagos = Pago::obtenerTodosConDetalles();
+    } else {
+        $pagos = Pago::obtenerPagosFiltrados($nombresRoles, $estatusPagos);
     }
 
-    $pagos = Pago::obtenerPagosFiltrados($nombresRoles, $estatusPagos);
+    // Si se envió un query desde la vista, aplicarlo sobre los resultados
+    if ($query !== '') {
+        $q = mb_strtolower($query);
+        $pagos = array_filter($pagos, function($p) use ($q) {
+            $id = (string)($p['id'] ?? '');
+            $usuarioId = (string)($p['usuario_id'] ?? '');
+            $nombre = mb_strtolower($p['nombre_completo'] ?? '');
+            $tipoPago = mb_strtolower($p['tipo_pago'] ?? '');
+            $roles = mb_strtolower($p['roles'] ?? '');
+
+            return str_contains($id, $q)
+                || str_contains($usuarioId, $q)
+                || str_contains($nombre, $q)
+                || str_contains($tipoPago, $q)
+                || str_contains($roles, $q);
+        });
+    }
 
     header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename=reporte_pagos_filtrado_' . date('Y-m-d') . '.csv');
+    header('Content-Disposition: attachment; filename=reporte_pagos_' . date('Y-m-d') . '.csv');
 
     $output = fopen('php://output', 'w');
     fputcsv($output, [
-        '#', 'ID Pago', 'ID Usuario', 'Nombre Usuario', 'Tipo de Usuario', 'Monto', 'Tipo de Pago', 'Estatus'
+        '#', 'ID Pago', 'ID Usuario', 'Nombre Usuario', 'Tipo de Pago', 'Tipo de Participante', 'Monto', 'Estatus', 'Comprobante'
     ]);
 
     $contador = 1;
     foreach ($pagos as $pago) {
-        $tipoUsuario = $pago['roles'];
-        if (str_contains($pago['roles'], 'Asistente')) {
-            if ($pago['monto'] == 300) $tipoUsuario = 'Asistente Estudiante';
-            elseif ($pago['monto'] == 1000) $tipoUsuario = 'Asistente Profesionista';
+        $roles = $pago['roles'] ?? '';
+        $monto = $pago['monto'] ?? null;
+
+        // Lógica para determinar "Tipo de Participante" — misma que la vista
+        $tipoParticipante = '-';
+        if (is_string($roles) && $roles !== '') {
+            if (strpos($roles, 'Autor') !== false) $tipoParticipante = 'Autor';
+            elseif (strpos($roles, 'Asistente con Cartel') !== false) $tipoParticipante = 'Asistente con Cartel';
+            elseif (strpos($roles, 'Revisor de Pagos') !== false) $tipoParticipante = 'Revisor de Pagos';
+            elseif (strpos($roles, 'Revisor') !== false) $tipoParticipante = 'Revisor';
         }
+
+        if ($tipoParticipante === '-' && is_numeric($monto)) {
+            if ($monto == 300) $tipoParticipante = 'Asistente Estudiante';
+            elseif ($monto == 1000) $tipoParticipante = 'Asistente Profesionista';
+        }
+
+        if ($tipoParticipante === '-' && !empty($roles)) {
+            $tipoParticipante = $roles;
+        }
+
+        $comprobante = $pago['comprobante_ruta'] ?? '';
+        if (empty($comprobante)) $comprobante = 'N/A';
 
         fputcsv($output, [
             $contador++,
-            $pago['id'],
-            $pago['usuario_id'],
-            $pago['nombre_completo'],
-            $tipoUsuario,
-            $pago['monto'],
-            $pago['tipo_pago'],
-            $pago['estatus_pago']
+            $pago['id'] ?? '',
+            $pago['usuario_id'] ?? '',
+            $pago['nombre_completo'] ?? '',
+            $pago['tipo_pago'] ?? '',
+            $tipoParticipante,
+            $pago['monto'] ?? '',
+            $pago['estatus_pago'] ?? '',
+            $comprobante
         ]);
     }
 
