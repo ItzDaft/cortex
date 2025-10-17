@@ -49,16 +49,16 @@
 <div class="mb-4">
     <input type="text" id="buscador-pagos" class="form-control" placeholder="Buscar por nombre de usuario...">
 </div>
-<h3 class="mt-4 mb-3">Desglose de Ingresos Aprobados</h3>
+<h3 class="mt-4 mb-3">Desglose de Ingresos por Tipo de Participante</h3>
 <div class="row">
-    <?php foreach($estadisticasPorTipo as $tipo): ?>
+    <?php foreach($estadisticasPorRol as $rolStat): ?>
         <div class="col-lg-4 col-md-6 mb-4">
             <div class="card bg-light h-100">
                 <div class="card-body">
-                    <h5 class="card-title"><?php echo htmlspecialchars($tipo['tipo_pago']); ?></h5>
+                    <h5 class="card-title"><?php echo htmlspecialchars($rolStat['categoria']); ?></h5>
                     <p class="card-text">
-                        <span class="fs-5 fw-bold">$<?php echo number_format($tipo['total'], 2); ?></span>
-                        <small class="text-muted">en <?php echo $tipo['cantidad']; ?> pagos</small>
+                        <span class="fs-5 fw-bold">$<?php echo number_format($rolStat['total'], 2); ?></span>
+                        <small class="text-muted">en <?php echo $rolStat['cantidad']; ?> pagos</small>
                     </p>
                 </div>
             </div>
@@ -85,7 +85,7 @@ foreach (($pagosPorEstatus['Pendiente'] ?? []) as $pago) {
             <table class="table table-hover align-middle">
                 <thead>
                     <tr>
-                        <th>#</th><th>ID Pago</th><th>Usuario</th><th>Monto</th><th>Tipo</th><th>Comprobante</th>
+                        <th>#</th><th>ID Pago</th><th>Usuario</th><th>Monto</th><th>Tipo de Participante</th><th>Comprobante</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -98,8 +98,24 @@ foreach (($pagosPorEstatus['Pendiente'] ?? []) as $pago) {
                                 <td><?php echo $pago['id']; ?></td>
                                 <td><?php echo htmlspecialchars($pago['nombre_completo']); ?></td>
                                 <td>$<?php echo number_format($pago['monto'], 2); ?></td>
-                                <td><?php echo htmlspecialchars($pago['tipo_pago']); ?></td>
-                                <td>
+<td>
+    <?php
+        $tipoParticipacion = '';
+        // Se usa str_contains para verificar si la cadena de roles contiene el rol específico.
+        if (str_contains($pago['roles'], 'Autor')) {
+            $tipoParticipacion = 'Extenso';
+        } elseif (str_contains($pago['roles'], 'Asistente con Cartel')) {
+            $tipoParticipacion = 'Póster';
+        } elseif (str_contains($pago['roles'], 'Asistente')) {
+            if ($pago['monto'] == 300) {
+                $tipoParticipacion = 'Asistente Estudiante';
+            } elseif ($pago['monto'] == 1000) {
+                $tipoParticipacion = 'Asistente Profesionista';
+            }
+        }
+        echo htmlspecialchars($tipoParticipacion ?: $pago['tipo_pago']);
+    ?>
+</td>                                <td>
                                     <a href="<?php echo BASE_URL; ?>archivo/ver/pagos/<?php echo $pago['comprobante_ruta']; ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
                                         Ver Archivo
                                     </a>

@@ -9,7 +9,7 @@ class AdministradorController {
             return false;
         }
         $rolesUsuario = Usuario::obtenerRoles($_SESSION['usuario_id']);
-        if (!in_array('Administrador', $rolesUsuario)) {
+        if (!in_array('Administrador', $rolesUsuario) || !in_array('Revisor de Pagos', $rolesUsuario)) {
             http_response_code(403);
             echo json_encode(['error' => 'Permisos insuficientes.']);
             return false;
@@ -263,7 +263,7 @@ public function pagos() {
 
     $todosLosPagos = Pago::obtenerTodosConDetalles();
     $estadisticas = Pago::obtenerEstadisticas();
-
+$estadisticasPorTipo = Pago::obtenerEstadisticasPorTipo();
     $pagosPorEstatus = [
         'Pendiente' => [],
         'Aprobado' => [],
@@ -277,7 +277,7 @@ public function pagos() {
     }
     $estadisticas = Pago::obtenerEstadisticas();
     $estadisticasPorTipo = Pago::obtenerEstadisticasPorTipo();   
-
+    $estadisticasPorRol = Pago::obtenerEstadisticasPorRol();
     require_once BACKEND_ROOT . '/app/views/layout/header.php';
     require_once BACKEND_ROOT . '/app/views/admin/pagos.php';
     require_once BACKEND_ROOT . '/app/views/layout/footer.php';

@@ -144,11 +144,16 @@ public static function crearPagoParaResumen(int $resumen_id, int $autor_id,float
  */
 public static function obtenerTodosConDetalles(): array {
     $pdo = Database::conectar();
-    $sql = "SELECT p.*, u.nombre_completo 
+    $sql = "SELECT 
+                p.*, 
+                u.nombre_completo,
+                GROUP_CONCAT(r.nombre_rol SEPARATOR ', ') as roles
             FROM pagos p
             JOIN usuarios u ON p.usuario_id = u.id
+            LEFT JOIN usuario_roles ur ON u.id = ur.usuario_id
+            LEFT JOIN roles r ON ur.rol_id = r.id
+            GROUP BY p.id
             ORDER BY p.id DESC";
-            
     $stmt = $pdo->query($sql);
     return $stmt->fetchAll();
 }
@@ -361,6 +366,31 @@ public static function obtenerPagosFiltrados(array $nombresRoles, array $estatus
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+/**
+ * Obtiene estadísticas de pagos aprobados, agrupados por el ROL del usuario,
+ * diferenciando entre Asistente Estudiante y Profesionista.
+ * @return array
+ */
+public static function obtenerEstadisticasPorRol(): array {
+    $pdo = Database::conectar();
+    $sql = "SELECT
+                CASE
+                    WHEN r.nombre_rol = 'Asistente' AND p.monto = 300 THEN 'Asistente Estudiante'
+                    WHEN r.nombre_rol = 'Asistente' AND p.monto = 1000 THEN 'Asistente Profesionista'
+                    ELSE r.nombre_rol
+                END as categoria,
+                COUNT(p.id) as cantidad,
+                SUM(p.monto) as total
+            FROM pagos p
+            JOIN usuarios u ON p.usuario_id = u.id
+            JOIN usuario_roles ur ON u.id = ur.usuario_id
+            JOIN roles r ON ur.rol_id = r.id
+            WHERE p.estatus_pago = 'Aprobado'
+            GROUP BY categoria";
+
+    $stmt = $pdo->query($sql);
     return $stmt->fetchAll();
 }
 
