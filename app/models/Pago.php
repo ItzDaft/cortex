@@ -147,6 +147,7 @@ public static function obtenerTodosConDetalles(): array {
     $sql = "SELECT 
                 p.*, 
                 u.nombre_completo,
+                u.institucion_procedencia,
                 GROUP_CONCAT(r.nombre_rol SEPARATOR ', ') as roles
             FROM pagos p
             JOIN usuarios u ON p.usuario_id = u.id
@@ -345,6 +346,7 @@ public static function obtenerPagosFiltrados(array $nombresRoles, array $estatus
     $pdo = Database::conectar();
 
     $sql = "SELECT DISTINCT p.*, u.nombre_completo, 
+                u.institucion_procedencia,
                 (SELECT GROUP_CONCAT(r.nombre_rol) FROM roles r JOIN usuario_roles ur ON r.id = ur.rol_id WHERE ur.usuario_id = u.id) as roles
             FROM pagos p
             JOIN usuarios u ON p.usuario_id = u.id

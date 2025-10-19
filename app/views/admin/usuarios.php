@@ -49,12 +49,12 @@ foreach ($ordenDeRoles as $rolNombre):
             <table class="table table-hover align-middle">
                 <thead>
                     <tr>
-                        <th>#</th> <th>ID</th><th>Nombre</th><th>Correo</th><th>Estado</th><th>Acciones</th>
-                    </tr>
+                            <th>#</th> <th>ID</th><th>Nombre</th><th>Correo</th><th>Institución</th><th>Estado</th><th>Acciones</th>
+                        </tr>
                 </thead>
                 <tbody class="tabla-usuarios-body">
                     <?php if (empty($listaUsuarios)): ?>
-                        <tr><td colspan="6" class="text-center">No hay usuarios con este rol.</td></tr>
+                        <tr><td colspan="7" class="text-center">No hay usuarios con este rol.</td></tr>
                     <?php else: ?>
                         <?php $contador = 1; ?>
 
@@ -64,6 +64,7 @@ foreach ($ordenDeRoles as $rolNombre):
                                 <td><?php echo $usuario['id']; ?></td>
                                 <td><?php echo htmlspecialchars($usuario['nombre_completo']); ?></td>
                                 <td><?php echo htmlspecialchars($usuario['correo']); ?></td>
+                                <td><?php echo htmlspecialchars($usuario['institucion_procedencia'] ?? $usuario['institucion'] ?? ''); ?></td>
                                 <td>
                                     <?php echo $usuario['activo'] == 1 ? '<span class="badge bg-success">Activo</span>' : '<span class="badge bg-danger">Inactivo</span>'; ?>
                                 </td>

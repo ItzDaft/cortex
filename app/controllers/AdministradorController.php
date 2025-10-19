@@ -437,8 +437,9 @@ public function exportarPagos() {
     header('Content-Disposition: attachment; filename=reporte_pagos_' . date('Y-m-d') . '.csv');
 
     $output = fopen('php://output', 'w');
+    fwrite($output, "\xEF\xBB\xBF");
     fputcsv($output, [
-        '#', 'ID Pago', 'ID Usuario', 'Nombre Usuario', 'Tipo de Pago', 'Tipo de Participante', 'Monto', 'Estatus', 'Comprobante'
+        '#', 'ID Pago', 'ID Usuario', 'Nombre Usuario', 'Institución', 'Tipo de Pago', 'Tipo de Participante', 'Monto', 'Estatus', 'Comprobante'
     ]);
 
     $contador = 1;
@@ -446,7 +447,6 @@ public function exportarPagos() {
         $roles = $pago['roles'] ?? '';
         $monto = $pago['monto'] ?? null;
 
-        // Lógica para determinar "Tipo de Participante" — misma que la vista
         $tipoParticipante = '-';
         if (is_string($roles) && $roles !== '') {
             if (strpos($roles, 'Autor') !== false) $tipoParticipante = 'Autor';
@@ -472,6 +472,7 @@ public function exportarPagos() {
             $pago['id'] ?? '',
             $pago['usuario_id'] ?? '',
             $pago['nombre_completo'] ?? '',
+            $pago['institucion_procedencia'] ?? '',
             $pago['tipo_pago'] ?? '',
             $tipoParticipante,
             $pago['monto'] ?? '',
