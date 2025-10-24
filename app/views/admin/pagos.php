@@ -111,17 +111,26 @@ function tipoParticipanteFromPago($pago) {
             <table class="table table-hover align-middle">
                 <thead>
                     <tr>
-                            <th>#</th><th>ID Pago</th><th>ID Usuario</th><th>Usuario</th><th>Institución</th><th>Monto</th><th>Tipo de Participante</th><th>Comprobante</th>
+                            <th>#</th><th>ID Pago</th><th>Resumen ID</th><th>ID Usuario</th><th>Usuario</th><th>Institución</th><th>Monto</th><th>Tipo de Participante</th><th>Comprobante</th>
                         </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($pendientesRevision)): ?>
-                        <tr><td colspan="8" class="text-center">No hay pagos pendientes en revisión.</td></tr>
+                        <tr><td colspan="9" class="text-center">No hay pagos pendientes en revisión.</td></tr>
                     <?php else: ?>
                         <?php $i=1; foreach ($pendientesRevision as $pago): ?>
                             <tr>
                                 <td><?php echo $i++; ?></td>
                                 <td><?php echo $pago['id']; ?></td>
+                                <td>
+                                    <?php if (!empty($pago['resumen_id'])): ?>
+                                        <a href="<?php echo BASE_URL; ?>administrador/obtenerResumenDetalles/<?php echo $pago['resumen_id']; ?>" target="_blank">
+                                            <?php echo $pago['resumen_id']; ?>
+                                        </a>
+                                    <?php else: ?>
+                                        &ndash;
+                                    <?php endif; ?>
+                                </td>
                                 <td><?php echo $pago['usuario_id'] ?? ''; ?></td>
                                 <td><?php echo htmlspecialchars($pago['nombre_completo']); ?></td>
                                 <td><?php echo htmlspecialchars($pago['institucion_procedencia'] ?? ''); ?></td>
@@ -148,17 +157,26 @@ function tipoParticipanteFromPago($pago) {
             <table class="table table-hover align-middle">
                 <thead>
                         <tr>
-                        <th>#</th><th>ID Pago</th><th>ID Usuario</th><th>Usuario</th><th>Institución</th><th>Monto</th><th>Tipo de Participante</th><th>Comprobante</th>
+                        <th>#</th><th>ID Pago</th><th>Resumen ID</th><th>ID Usuario</th><th>Usuario</th><th>Institución</th><th>Monto</th><th>Tipo de Participante</th><th>Comprobante</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($pendientesSinComprobante)): ?>
-                        <tr><td colspan="8" class="text-center">No hay pagos pendientes sin comprobante.</td></tr>
+                        <tr><td colspan="9" class="text-center">No hay pagos pendientes sin comprobante.</td></tr>
                     <?php else: ?>
                         <?php $i=1; foreach ($pendientesSinComprobante as $pago): ?>
                             <tr>
                                 <td><?php echo $i++; ?></td>
                                 <td><?php echo $pago['id']; ?></td>
+                                <td>
+                                    <?php if (!empty($pago['resumen_id'])): ?>
+                                        <a href="<?php echo BASE_URL; ?>administrador/obtenerResumenDetalles/<?php echo $pago['resumen_id']; ?>" target="_blank">
+                                            <?php echo $pago['resumen_id']; ?>
+                                        </a>
+                                    <?php else: ?>
+                                        &ndash;
+                                    <?php endif; ?>
+                                </td>
                                 <td><?php echo $pago['usuario_id'] ?? ''; ?></td>
                                 <td><?php echo htmlspecialchars($pago['nombre_completo']); ?></td>
                                 <td><?php echo htmlspecialchars($pago['institucion_procedencia'] ?? ''); ?></td>
@@ -190,17 +208,26 @@ foreach ($ordenDeEstatus as $estatus => $titulo):
             <table class="table table-hover align-middle">
                 <thead>
                     <tr>
-                        <th>#</th><th>ID Pago</th><th>ID Usuario</th><th>Usuario</th><th>Institución</th><th>Monto</th><th>Tipo de Participante</th><th>Comprobante</th>
+                        <th>#</th><th>ID Pago</th><th>Resumen ID</th><th>ID Usuario</th><th>Usuario</th><th>Institución</th><th>Monto</th><th>Tipo de Participante</th><th>Comprobante</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($listaPagos)): ?>
-                        <tr><td colspan="8" class="text-center">No hay pagos en este estado.</td></tr>
+                        <tr><td colspan="9" class="text-center">No hay pagos en este estado.</td></tr>
                     <?php else: ?>
                         <?php $i=1; foreach ($listaPagos as $pago): ?>
                             <tr>
                                 <td><?php echo $i++; ?></td>
                                 <td><?php echo $pago['id']; ?></td>
+                                <td>
+                                    <?php if (!empty($pago['resumen_id'])): ?>
+                                        <a href="<?php echo BASE_URL; ?>administrador/obtenerResumenDetalles/<?php echo $pago['resumen_id']; ?>" target="_blank">
+                                            <?php echo $pago['resumen_id']; ?>
+                                        </a>
+                                    <?php else: ?>
+                                        &ndash;
+                                    <?php endif; ?>
+                                </td>
                                 <td><?php echo $pago['usuario_id'] ?? ''; ?></td>
                                 <td><?php echo htmlspecialchars($pago['nombre_completo']); ?></td>
                                 <td><?php echo htmlspecialchars($pago['institucion_procedencia'] ?? ''); ?></td>
@@ -285,21 +312,23 @@ document.addEventListener('DOMContentLoaded', function() {
                         return;
                     }
 
-                    // Column indexes after changes:
-                    // 0: #, 1: ID Pago, 2: ID Usuario, 3: Usuario, 4: Institución, 5: Monto, 6: Tipo de Participante, 7: Comprobante
+                    // Column indexes after adding 'Resumen ID':
+                    // 0: #, 1: ID Pago, 2: Resumen ID, 3: ID Usuario, 4: Usuario, 5: Institución, 6: Monto, 7: Tipo de Participante, 8: Comprobante
                     const idCell = row.children[1];
-                    const usuarioIdCell = row.children[2];
-                    const nombreCell = row.children[3];
-                    const institucionCell = row.children[4];
-                    const tipoCell = row.children[6];
+                    const resumenIdCell = row.children[2];
+                    const usuarioIdCell = row.children[3];
+                    const nombreCell = row.children[4];
+                    const institucionCell = row.children[5];
+                    const tipoCell = row.children[7];
 
                     const idText = idCell ? idCell.textContent.trim().toLowerCase() : '';
+                    const resumenIdText = resumenIdCell ? resumenIdCell.textContent.trim().toLowerCase() : '';
                     const usuarioIdText = usuarioIdCell ? usuarioIdCell.textContent.trim().toLowerCase() : '';
                     const nombreText = nombreCell ? nombreCell.textContent.trim().toLowerCase() : '';
                     const institucionText = institucionCell ? institucionCell.textContent.trim().toLowerCase() : '';
                     const tipoText = tipoCell ? tipoCell.textContent.trim().toLowerCase() : '';
 
-                    if (mostrarTodo || idText.includes(filtro) || usuarioIdText.includes(filtro) || nombreText.includes(filtro) || institucionText.includes(filtro) || tipoText.includes(filtro)) {
+                    if (mostrarTodo || idText.includes(filtro) || resumenIdText.includes(filtro) || usuarioIdText.includes(filtro) || nombreText.includes(filtro) || institucionText.includes(filtro) || tipoText.includes(filtro)) {
                         row.style.display = '';
                     } else {
                         row.style.display = 'none';

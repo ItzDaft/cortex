@@ -439,7 +439,7 @@ public function exportarPagos() {
     $output = fopen('php://output', 'w');
     fwrite($output, "\xEF\xBB\xBF");
     fputcsv($output, [
-        '#', 'ID Pago', 'ID Usuario', 'Nombre Usuario', 'Institución', 'Tipo de Pago', 'Tipo de Participante', 'Monto', 'Estatus', 'Comprobante'
+        '#', 'ID Pago', 'Resumen ID', 'ID Usuario', 'Nombre Usuario', 'Institución', 'Tipo de Pago', 'Tipo de Participante', 'Monto', 'Estatus', 'Comprobante'
     ]);
 
     $contador = 1;
@@ -467,9 +467,18 @@ public function exportarPagos() {
         $comprobante = $pago['comprobante_ruta'] ?? '';
         if (empty($comprobante)) $comprobante = 'N/A';
 
+        // Resumen detalle URL (admin)
+        $resumenId = $pago['resumen_id'] ?? '';
+        $resumenUrl = '';
+        if (!empty($resumenId)) {
+            // BASE_URL should be defined in bootstrap/config
+            $resumenUrl = (defined('BASE_URL') ? rtrim(BASE_URL, '/') : '') . '/administrador/obtenerResumenDetalles/' . $resumenId;
+        }
+
         fputcsv($output, [
             $contador++,
             $pago['id'] ?? '',
+            $resumenUrl ?: ($pago['resumen_id'] ?? ''),
             $pago['usuario_id'] ?? '',
             $pago['nombre_completo'] ?? '',
             $pago['institucion_procedencia'] ?? '',
