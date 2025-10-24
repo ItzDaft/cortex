@@ -124,7 +124,7 @@ function tipoParticipanteFromPago($pago) {
                                 <td><?php echo $pago['id']; ?></td>
                                 <td>
                                     <?php if (!empty($pago['resumen_id'])): ?>
-                                        <a href="<?php echo BASE_URL; ?>administrador/obtenerResumenDetalles/<?php echo $pago['resumen_id']; ?>" target="_blank">
+                                        <a href="#" class="btn-ver-detalles" data-id="<?php echo $pago['resumen_id']; ?>">
                                             <?php echo $pago['resumen_id']; ?>
                                         </a>
                                     <?php else: ?>
@@ -170,7 +170,7 @@ function tipoParticipanteFromPago($pago) {
                                 <td><?php echo $pago['id']; ?></td>
                                 <td>
                                     <?php if (!empty($pago['resumen_id'])): ?>
-                                        <a href="<?php echo BASE_URL; ?>administrador/obtenerResumenDetalles/<?php echo $pago['resumen_id']; ?>" target="_blank">
+                                        <a href="#" class="btn-ver-detalles" data-id="<?php echo $pago['resumen_id']; ?>">
                                             <?php echo $pago['resumen_id']; ?>
                                         </a>
                                     <?php else: ?>
@@ -221,7 +221,7 @@ foreach ($ordenDeEstatus as $estatus => $titulo):
                                 <td><?php echo $pago['id']; ?></td>
                                 <td>
                                     <?php if (!empty($pago['resumen_id'])): ?>
-                                        <a href="<?php echo BASE_URL; ?>administrador/obtenerResumenDetalles/<?php echo $pago['resumen_id']; ?>" target="_blank">
+                                        <a href="#" class="btn-ver-detalles" data-id="<?php echo $pago['resumen_id']; ?>">
                                             <?php echo $pago['resumen_id']; ?>
                                         </a>
                                     <?php else: ?>
@@ -298,6 +298,24 @@ foreach ($ordenDeEstatus as $estatus => $titulo):
     </div>
   </div>
 </div>
+ 
+    <!-- Modal: Detalle del Resumen (abre dentro de la misma página) -->
+    <div class="modal fade" id="detalleResumenModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Detalle del Resumen</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="detalleResumenBody">
+                    <div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const buscador = document.getElementById('buscador-pagos');
@@ -376,5 +394,50 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+
+            // --- Manejo del modal de detalle del resumen (abre dentro de la misma página) ---
+            const detalleModalEl = document.getElementById('detalleResumenModal');
+            const detalleModal = detalleModalEl ? new bootstrap.Modal(detalleModalEl) : null;
+            const detalleBody = document.getElementById('detalleResumenBody');
+            const baseUrl = '<?php echo BASE_URL; ?>';
+
+            // Delegación de evento para cualquier enlace con la clase 'btn-ver-detalles'
+            document.body.addEventListener('click', function(event) {
+                const btn = event.target.closest('.btn-ver-detalles');
+                if (!btn) return;
+                event.preventDefault();
+                const resumenId = btn.getAttribute('data-id');
+                if (!resumenId) return;
+
+                if (detalleBody) {
+                    detalleBody.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+                }
+                if (detalleModal) detalleModal.show();
+
+                fetch(`${baseUrl}administrador/obtenerResumenDetalles/${resumenId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        const tipoResumen = data.autor_roles && data.autor_roles.includes('Autor') ? 'Extenso' : 'Póster';
+                        let keywordsHTML = data.palabras_clave ? data.palabras_clave.split(',').map(k => `<span class="badge bg-secondary me-1">${k.trim()}</span>`).join(' ') : 'No especificado';
+                        if (detalleBody) {
+                            detalleBody.innerHTML = `
+                                <h4>${data.titulo}</h4>
+                                <p><strong>Tipo:</strong> ${tipoResumen}</p>
+                                <hr>
+                                <p><strong>Autor Principal:</strong> ${data.autor_principal}</p>
+                                <p><strong>Co-autores:</strong> ${data.coautores || 'N/A'}</p>
+                                <p><strong>Adscripción 1:</strong> ${data.adscripcion1 || 'N/A'}</p>
+                                <p><strong>Adscripción 2:</strong> ${data.adscripcion2 || 'N/A'}</p>
+                                <hr>
+                                <p style="white-space: pre-wrap;">${data.resumen_texto || ''}</p>
+                                <hr>
+                                <p><strong>Palabras clave:</strong> ${keywordsHTML}</p>
+                            `;
+                        }
+                    })
+                    .catch(err => {
+                        if (detalleBody) detalleBody.innerHTML = '<p class="text-danger">Error al cargar el detalle del resumen.</p>';
+                    });
+            });
 });
 </script>
