@@ -79,12 +79,10 @@ foreach (($pagosPorEstatus['Pendiente'] ?? []) as $pago) {
 ?>
 
 <?php
-// Helper: determina el tipo de participante a mostrar en la tabla
 function tipoParticipanteFromPago($pago) {
     $roles = $pago['roles'] ?? '';
     $monto = $pago['monto'] ?? null;
 
-    // Priorizar roles explícitos
     if (is_string($roles)) {
         if (strpos($roles, 'Autor') !== false) return htmlspecialchars('Autor');
         if (strpos($roles, 'Asistente con Cartel') !== false) return htmlspecialchars('Asistente con Cartel');
@@ -92,13 +90,11 @@ function tipoParticipanteFromPago($pago) {
         if (strpos($roles, 'Revisor de Pagos') !== false) return htmlspecialchars('Revisor de Pagos');
     }
 
-    // Si es asistente, usar monto para distinguir estudiante/profesionista
     if (is_numeric($monto)) {
         if ($monto == 300) return htmlspecialchars('Asistente Estudiante');
         if ($monto == 1000) return htmlspecialchars('Asistente Profesionista');
     }
 
-    // Fallback: si hay rol(s) devolver la cadena; sino devolver '-' 
     if (!empty($roles)) return htmlspecialchars($roles);
     return '-';
 }
@@ -299,7 +295,6 @@ foreach ($ordenDeEstatus as $estatus => $titulo):
   </div>
 </div>
  
-    <!-- Modal: Detalle del Resumen (abre dentro de la misma página) -->
     <div class="modal fade" id="detalleResumenModal" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
@@ -330,8 +325,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         return;
                     }
 
-                    // Column indexes after adding 'Resumen ID':
-                    // 0: #, 1: ID Pago, 2: Resumen ID, 3: ID Usuario, 4: Usuario, 5: Institución, 6: Monto, 7: Tipo de Participante, 8: Comprobante
                     const idCell = row.children[1];
                     const resumenIdCell = row.children[2];
                     const usuarioIdCell = row.children[3];
@@ -395,13 +388,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-            // --- Manejo del modal de detalle del resumen (abre dentro de la misma página) ---
             const detalleModalEl = document.getElementById('detalleResumenModal');
             const detalleModal = detalleModalEl ? new bootstrap.Modal(detalleModalEl) : null;
             const detalleBody = document.getElementById('detalleResumenBody');
             const baseUrl = '<?php echo BASE_URL; ?>';
 
-            // Delegación de evento para cualquier enlace con la clase 'btn-ver-detalles'
             document.body.addEventListener('click', function(event) {
                 const btn = event.target.closest('.btn-ver-detalles');
                 if (!btn) return;
