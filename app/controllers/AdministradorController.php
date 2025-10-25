@@ -426,9 +426,32 @@ public function condonarPago() {
         return;
     }
 
+    // Obtener datos del pago y usuario antes de modificar (para notificación)
+    $pagoAntes = Pago::buscarPorId($pagoId);
+    $usuario = null;
+    if ($pagoAntes && !empty($pagoAntes['usuario_id'])) {
+        $usuario = Usuario::buscarPorId((int)$pagoAntes['usuario_id']);
+    }
+
     $revisorId = $_SESSION['usuario_id'];
     if (Pago::condonarPago($pagoId, $revisorId)) {
-        echo json_encode(['mensaje' => 'Pago condonado correctamente.']);
+        // obtener estadísticas actualizadas para enviar al cliente
+        $estadisticasActuales = Pago::obtenerEstadisticas();
+
+        // Enviar correo al usuario notificando la condonación (si se encontró correo)
+        if ($usuario && !empty($usuario['correo'])) {
+            $asunto = "Notificación de condonación de pago - CCTI 2025";
+            $montoAntes = isset($pagoAntes['monto']) ? number_format($pagoAntes['monto'], 2) : '0.00';
+            $cuerpo = "<p>Estimado/a " . htmlspecialchars($usuario['nombre_completo'] ?? '') . ",</p>" .
+                     "<p>Le informamos que su pago (ID: <strong>" . htmlspecialchars($pagoId) . "</strong>) ha sido <strong>condonado</strong> por el comité administrativo.</p>" .
+                     "<p>Monto anterior: <strong>$" . $montoAntes . " MXN</strong><br>Nuevo monto: <strong>$0.00 MXN</strong></p>" .
+                     "<p>Fecha de la acción: " . date('Y-m-d H:i:s') . "</p>" .
+                     "<p>Si tiene dudas, por favor contacte al comité a través de la plataforma.</p>";
+
+            MailHelper::enviarCorreo($usuario['correo'], $usuario['nombre_completo'] ?? '', $asunto, $cuerpo);
+        }
+
+        echo json_encode(['mensaje' => 'Pago condonado correctamente.', 'estadisticas' => $estadisticasActuales]);
     } else {
         http_response_code(500);
         echo json_encode(['error' => 'No se pudo condonar el pago.']);

@@ -5,41 +5,41 @@
 <div class="row mb-4">
     <div class="col-xl-3 col-md-6 mb-4">
         <div class="card text-white bg-primary h-100">
-            <div class="card-body">
+                <div class="card-body">
                 <h5 class="card-title">Total Recaudado</h5>
-                <p class="card-text fs-4">$<?php echo number_format($estadisticas['total_recaudado'] ?? 0, 2); ?> MXN</p>
+                <p id="stat-total-recaudado" class="card-text fs-4">$<?php echo number_format($estadisticas['total_recaudado'] ?? 0, 2); ?> MXN</p>
             </div>
         </div>
     </div>
     <div class="col-xl col-md-6 mb-4">
         <div class="card bg-warning text-dark h-100">
-            <div class="card-body">
+                <div class="card-body">
                 <h5 class="card-title">Pagos en Revisión</h5>
-                <p class="card-text fs-4"><?php echo $estadisticas['en_revision'] ?? 0; ?></p>
+                <p id="stat-en-revision" class="card-text fs-4"><?php echo $estadisticas['en_revision'] ?? 0; ?></p>
             </div>
         </div>
     </div>
     <div class="col-xl col-md-6 mb-4">
         <div class="card bg-info text-white h-100">
-            <div class="card-body">
+                <div class="card-body">
                 <h5 class="card-title">Pendientes (sin comprobante)</h5>
-                <p class="card-text fs-4"><?php echo $estadisticas['pendientes_sin_comprobante'] ?? 0; ?></p>
+                <p id="stat-pendientes-sin-comprobante" class="card-text fs-4"><?php echo $estadisticas['pendientes_sin_comprobante'] ?? 0; ?></p>
             </div>
         </div>
     </div>
     <div class="col-xl col-md-6 mb-4">
         <div class="card bg-success text-white h-100">
-            <div class="card-body">
+                <div class="card-body">
                 <h5 class="card-title">Aprobados</h5>
-                <p class="card-text fs-4"><?php echo $estadisticas['aprobados'] ?? 0; ?></p>
+                <p id="stat-aprobados" class="card-text fs-4"><?php echo $estadisticas['aprobados'] ?? 0; ?></p>
             </div>
         </div>
     </div>
     <div class="col-xl col-md-6 mb-4">
         <div class="card bg-danger text-white h-100">
-            <div class="card-body">
+                <div class="card-body">
                 <h5 class="card-title">Rechazados</h5>
-                <p class="card-text fs-4"><?php echo $estadisticas['rechazados'] ?? 0; ?></p>
+                <p id="stat-rechazados" class="card-text fs-4"><?php echo $estadisticas['rechazados'] ?? 0; ?></p>
             </div>
         </div>
     </div>
@@ -468,6 +468,23 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (comprobanteCell) comprobanteCell.innerHTML = '<small class="text-muted">Condonado</small>';
                             btn.remove();
                         }
+
+                        // Si el servidor devuelve estadísticas actualizadas, refrescarlas en la UI
+                        if (json.estadisticas) {
+                            const est = json.estadisticas;
+                            const totalRecaudadoEl = document.getElementById('stat-total-recaudado');
+                            const enRevisionEl = document.getElementById('stat-en-revision');
+                            const pendientesSinCompEl = document.getElementById('stat-pendientes-sin-comprobante');
+                            const aprobadosEl = document.getElementById('stat-aprobados');
+                            const rechazadosEl = document.getElementById('stat-rechazados');
+
+                            if (totalRecaudadoEl) totalRecaudadoEl.textContent = '$' + (Number(est['total_recaudado'] ?? 0)).toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' MXN';
+                            if (enRevisionEl) enRevisionEl.textContent = est['en_revision'] ?? 0;
+                            if (pendientesSinCompEl) pendientesSinCompEl.textContent = est['pendientes_sin_comprobante'] ?? 0;
+                            if (aprobadosEl) aprobadosEl.textContent = est['aprobados'] ?? 0;
+                            if (rechazadosEl) rechazadosEl.textContent = est['rechazados'] ?? 0;
+                        }
+
                         alert(json.mensaje || 'Pago condonado correctamente.');
                     })
                     .catch(err => {
