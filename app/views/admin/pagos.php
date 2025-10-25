@@ -136,6 +136,7 @@ function tipoParticipanteFromPago($pago) {
                                     <a href="<?php echo BASE_URL; ?>archivo/ver/pagos/<?php echo $pago['comprobante_ruta']; ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
                                         Ver Archivo
                                     </a>
+                                    <button type="button" class="btn btn-sm btn-warning ms-2 btn-condonar" data-id="<?php echo $pago['id']; ?>">Condonar</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -178,7 +179,10 @@ function tipoParticipanteFromPago($pago) {
                                 <td><?php echo htmlspecialchars($pago['institucion_procedencia'] ?? ''); ?></td>
                                 <td>$<?php echo number_format($pago['monto'], 2); ?></td>
                                 <td><?php echo tipoParticipanteFromPago($pago); ?></td>
-                                <td><small class="text-muted">N/A</small></td>
+                                <td>
+                                    <small class="text-muted">N/A</small>
+                                    <button type="button" class="btn btn-sm btn-warning ms-2 btn-condonar" data-id="<?php echo $pago['id']; ?>">Condonar</button>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -430,5 +434,45 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (detalleBody) detalleBody.innerHTML = '<p class="text-danger">Error al cargar el detalle del resumen.</p>';
                     });
             });
+
+                // Manejador para condonar un pago desde la tabla
+                document.body.addEventListener('click', function(event) {
+                    const btn = event.target.closest('.btn-condonar');
+                    if (!btn) return;
+                    event.preventDefault();
+                    if (!confirm('¿Confirma que desea condonar este pago? Esta acción pondrá el monto a $0.00 y lo marcará como Aprobado.')) return;
+
+                    const pagoId = btn.getAttribute('data-id');
+                    if (!pagoId) return;
+
+                    const csrfInput = document.querySelector('input[name="csrf_token"]');
+                    const csrf = csrfInput ? csrfInput.value : '';
+
+                    const fd = new FormData();
+                    fd.append('pago_id', pagoId);
+                    fd.append('csrf_token', csrf);
+
+                    fetch(baseUrl + 'administrador/condonarPago', {
+                        method: 'POST',
+                        body: fd
+                    })
+                    .then(res => res.json())
+                    .then(json => {
+                        if (json.error) throw new Error(json.error);
+                        // Actualizar la fila visualmente
+                        const row = btn.closest('tr');
+                        if (row) {
+                            const montoCell = row.children[6];
+                            const comprobanteCell = row.children[8];
+                            if (montoCell) montoCell.textContent = '$0.00';
+                            if (comprobanteCell) comprobanteCell.innerHTML = '<small class="text-muted">Condonado</small>';
+                            btn.remove();
+                        }
+                        alert(json.mensaje || 'Pago condonado correctamente.');
+                    })
+                    .catch(err => {
+                        alert('Error al condonar el pago: ' + (err.message || 'No se pudo completar la operación.'));
+                    });
+                });
 });
 </script>

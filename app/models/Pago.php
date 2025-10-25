@@ -396,4 +396,23 @@ public static function obtenerEstadisticasPorRol(): array {
     return $stmt->fetchAll();
 }
 
+/**
+ * Realiza una condonación de un pago: pone el monto a 0.00, marca como Aprobado,
+ * asigna el revisor que realizó la acción y deja la fecha de revisión en el timestamp actual.
+ * @param int $pago_id
+ * @param int $revisor_id
+ * @return bool
+ */
+public static function condonarPago(int $pago_id, int $revisor_id): bool {
+    $pdo = Database::conectar();
+    $sql = "UPDATE pagos SET 
+                monto = 0.00,
+                estatus_pago = 'Aprobado',
+                revisor_pago_id = :revisor_id,
+                fecha_revision_pago = CURRENT_TIMESTAMP,
+                comentarios_rechazo = NULL
+            WHERE id = :pago_id";
+    $stmt = $pdo->prepare($sql);
+    return $stmt->execute(['revisor_id' => $revisor_id, 'pago_id' => $pago_id]);
+}
 }

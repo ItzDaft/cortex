@@ -402,6 +402,38 @@ public function obtenerEvaluacionesExtenso($extenso_id) {
         echo json_encode([]);
     }
 }
+
+/**
+ * (API) Condonar un pago: pone monto a 0.00, marca como Aprobado,
+ * asigna el id del usuario que realizó la condonación y fecha de revisión.
+ */
+public function condonarPago() {
+    header('Content-Type: application/json');
+    if (!$this->autorizar(['Administrador', 'Revisor de Pagos'])) return;
+
+    $pagoId = isset($_POST['pago_id']) ? (int)$_POST['pago_id'] : 0;
+    $token = $_POST['csrf_token'] ?? null;
+
+    if (!CSRFHelper::verifyToken($token)) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Token CSRF inválido.']);
+        return;
+    }
+
+    if ($pagoId <= 0) {
+        http_response_code(400);
+        echo json_encode(['error' => 'ID de pago inválido.']);
+        return;
+    }
+
+    $revisorId = $_SESSION['usuario_id'];
+    if (Pago::condonarPago($pagoId, $revisorId)) {
+        echo json_encode(['mensaje' => 'Pago condonado correctamente.']);
+    } else {
+        http_response_code(500);
+        echo json_encode(['error' => 'No se pudo condonar el pago.']);
+    }
+}
 public function exportarPagos() {
     if (!$this->autorizar()) return;
     $nombresRoles = $_POST['roles'] ?? [];
