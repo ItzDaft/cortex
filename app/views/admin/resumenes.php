@@ -1,7 +1,11 @@
 <h1 class="mb-4">Gestión General de Resúmenes</h1>
 <?php CSRFHelper::getTokenInput(); ?>
 <div id="mensaje-resumenes"></div>
-
+<div class="my-3">
+    <a href="<?php echo BASE_URL; ?>administrador/exportarAutoresParaMemorias" class="btn btn-success">
+        <i class="bi bi-download me-2"></i>Exportar Autores para Memorias (CSV)
+    </a>
+</div>
 <div class="mb-4">
     <input type="text" id="buscador-resumenes" class="form-control" placeholder="Buscar por título, autor o área...">
 </div>

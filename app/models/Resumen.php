@@ -262,4 +262,40 @@ public static function buscarParaEnvioExtenso(int $autor_id): array {
     $stmt->execute(['autor_id' => $autor_id]);
     return $stmt->fetchAll();
 }
+public static function obtenerDatosPorMemorias(): array {
+    $pdo = Database::conectar();
+    // CAMBIO: Se eliminó el "WHERE res.id = :resumen_id"
+    $sql = "SELECT 
+        res.id,
+        res.autor_principal,
+        res.coautores,
+        res.adscripcion1,
+        res.adscripcion2,
+        res.titulo,
+        res.resumen_texto,
+        res.palabras_clave,
+        CASE
+            WHEN GROUP_CONCAT(r.nombre_rol) LIKE '%Autor%' THEN 'Extenso'
+            WHEN GROUP_CONCAT(r.nombre_rol) LIKE '%Asistente con Cartel%' THEN 'Póster'
+            ELSE 'Otro'
+        END AS tipo_de_usuario,
+        a.nombre_area
+    FROM
+        resumenes res
+    JOIN
+        usuarios u ON res.autor_id = u.id
+    JOIN
+        usuario_roles ur ON u.id = ur.usuario_id
+    JOIN
+        roles r ON ur.rol_id = r.id
+    JOIN
+        areas_tematicas a ON res.area_id = a.id
+    WHERE
+        r.nombre_rol IN ('Autor', 'Asistente con Cartel')
+    GROUP BY
+        res.id";
+
+    $stmt = $pdo->query($sql);
+    return $stmt->fetchAll(); 
+}
 }

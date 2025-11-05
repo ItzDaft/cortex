@@ -543,4 +543,49 @@ public function exportarPagos() {
     fclose($output);
     exit;
 }
+public function exportarAutoresParaMemorias() {
+    if (!$this->autorizar()) return;
+
+    $resumenes = Resumen::obtenerDatosPorMemorias(); 
+
+    $datosCSV = [];
+    foreach ($resumenes as $resumen) {
+
+        $datos_comunes = [
+            'titulo_de_trabajo' => $resumen['titulo'],
+            'adscripcion1' => $resumen['adscripcion1'],
+            'adscripcion2' => $resumen['adscripcion2'],
+            'tipo_de_usuario' => $resumen['tipo_de_usuario']
+        ];
+
+        $todos_los_nombres_str = $resumen['autor_principal'] . "\n" . $resumen['coautores'];
+
+        $nombres_individuales = preg_split('/[\n,\/]/', $todos_los_nombres_str);
+        $nombres_limpios = [];
+        foreach ($nombres_individuales as $nombre) {
+            $nombre_limpio = trim($nombre); 
+            if (!empty($nombre_limpio)) {
+                $nombres_limpios[] = $nombre_limpio;
+            }
+        }
+        foreach ($nombres_limpios as $nombre_final) {
+            $datosCSV[] = [
+                'autor' => $nombre_final
+            ] + $datos_comunes;
+        }
+    }
+
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=reporte_autores_trabajos_' . date('Y-m-d') . '.csv');
+    $output = fopen('php://output', 'w');
+
+    fputcsv($output, ['Autor', 'Título del Trabajo', 'Adscripción 1', 'Adscripción 2', 'Tipo de Trabajo']);
+
+    foreach ($datosCSV as $fila) {
+        fputcsv($output, $fila);
+    }
+
+    fclose($output);
+    exit;
+}
 }
