@@ -84,8 +84,14 @@ public function dashboard() {
     if (!Usuario::perfilRevisorEstaCompleto($_SESSION['usuario_id'])) {
         redirect('revisorExtensos/completarPerfil');
     }
-    $evaluacionesAsignadas = EvaluacionExtenso::buscarAsignadasPorRevisor($_SESSION['usuario_id']);
-    $evaluacionesCompletadas = EvaluacionExtenso::buscarCompletadasPorRevisor($_SESSION['usuario_id']);
+    // List 1: Por Evaluar (Drafts or Pending)
+    $evaluacionesPorEvaluar = EvaluacionExtenso::buscarAsignadasPorRevisor($_SESSION['usuario_id']);
+
+    // List 2: Por Firmar (Accepted Pending PDF)
+    $evaluacionesPorFirmar = EvaluacionExtenso::buscarPorFirmarPorRevisor($_SESSION['usuario_id']);
+
+    // List 3: Historial (Completed/Validated)
+    $evaluacionesHistorial = EvaluacionExtenso::buscarCompletadasPorRevisor($_SESSION['usuario_id']);
 
     require_once BACKEND_ROOT . '/app/views/layout/header.php';
     require_once BACKEND_ROOT . '/app/views/revisor_extensos/dashboard.php';
@@ -138,7 +144,12 @@ public function procesarEvaluacion($evaluacion_id) {
     ];
 
     if ($veredicto === 'Favorable y Publicable') {
-        if (EvaluacionExtenso::guardarEvaluacion($evaluacion_id, $datos_guardar, 'Pendiente de Firma')) {
+        // Requires Signature -> Pendiente de Firma
+        if (EvaluacionExtenso::validarEvaluacion($evaluacion_id, 'Pendiente de Firma', null)) {
+            // Also need to save content
+             EvaluacionExtenso::guardarEvaluacion($evaluacion_id, $datos_guardar); // Saves data
+             EvaluacionExtenso::validarEvaluacion($evaluacion_id, 'Pendiente de Firma', null); // Ensure status
+
             $pdf_url = BASE_URL . 'reporte/generarEvaluacionPDF/' . $evaluacion_id;
             echo json_encode([
                 'mensaje' => 'Evaluación favorable. Descarga el PDF para firmarlo.',
@@ -150,9 +161,16 @@ public function procesarEvaluacion($evaluacion_id) {
         }
 
     } else {
-        if (EvaluacionExtenso::guardarEvaluacion($evaluacion_id, $datos_guardar, 'Pendiente de Validación')) {
+        // No signature needed -> Validada immediately
+        EvaluacionExtenso::guardarEvaluacion($evaluacion_id, $datos_guardar);
+        if (EvaluacionExtenso::validarEvaluacion($evaluacion_id, 'Validada', null)) {
+
+            // Check Consensus Logic
+            $evaluacion = EvaluacionExtenso::buscarPorId($evaluacion_id);
+            EvaluacionExtenso::verificarConsenso($evaluacion['extenso_version_id']);
+
             echo json_encode([
-                'mensaje' => 'Evaluación enviada al Coordinador.',
+                'mensaje' => 'Evaluación enviada y registrada.',
                 'requiere_firma' => false
             ]);
         } else {
@@ -187,6 +205,11 @@ public function subirPdfFirmado($evaluacion_id) {
 
     if (move_uploaded_file($archivo['tmp_name'], $rutaDestino)) {
         if (EvaluacionExtenso::guardarPdfFirmado($evaluacion_id, $nombreUnico)) {
+
+            // Check Consensus Logic
+            $evaluacion = EvaluacionExtenso::buscarPorId($evaluacion_id);
+            EvaluacionExtenso::verificarConsenso($evaluacion['extenso_version_id']);
+
             echo json_encode(['mensaje' => 'Evaluación firmada subida con éxito.']);
         } else {
             http_response_code(500); echo json_encode(['error' => 'No se pudo actualizar la base de datos.']);
