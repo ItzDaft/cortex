@@ -264,22 +264,23 @@ public static function buscarParaEnvioExtenso(int $autor_id): array {
 }
 public static function obtenerDatosPorMemorias(): array {
     $pdo = Database::conectar();
-    // CAMBIO: Se eliminó el "WHERE res.id = :resumen_id"
+
     $sql = "SELECT 
         res.id,
-        res.autor_principal,
-        res.coautores,
-        res.adscripcion1,
-        res.adscripcion2,
-        res.titulo,
-        res.resumen_texto,
-        res.palabras_clave,
+        MAX(res.autor_principal) AS autor_principal,
+        MAX(res.coautores) AS coautores,
+        MAX(res.adscripcion1) AS adscripcion1,
+        MAX(res.adscripcion2) AS adscripcion2,
+        MAX(res.titulo) AS titulo,
+        MAX(res.resumen_texto) AS resumen_texto,
+        MAX(res.palabras_clave) AS palabras_clave,
+        MAX(u.correo) AS autor_correo, 
         CASE
             WHEN GROUP_CONCAT(r.nombre_rol) LIKE '%Autor%' THEN 'Extenso'
             WHEN GROUP_CONCAT(r.nombre_rol) LIKE '%Asistente con Cartel%' THEN 'Póster'
             ELSE 'Otro'
         END AS tipo_de_usuario,
-        a.nombre_area
+        MAX(a.nombre_area) AS nombre_area
     FROM
         resumenes res
     JOIN

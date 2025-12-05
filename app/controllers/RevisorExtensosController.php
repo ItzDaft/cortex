@@ -116,26 +116,48 @@ public function procesarEvaluacion($evaluacion_id) {
     }
 
     $datos_post = $_POST;
-    $respuestas = [];
+    
     for ($i = 1; $i <= 6; $i++) {
-        $respuestas['pregunta_'.$i] = $datos_post['pregunta_'.$i] ?? 'no';
+        if (empty($datos_post['pregunta_'.$i])) {
+            http_response_code(400); echo json_encode(['error' => 'Por favor, responde todas las preguntas.']); return;
+        }
     }
+    if (empty($datos_post['veredicto'])) {
+        http_response_code(400); echo json_encode(['error' => 'Selecciona una valoración global.']); return;
+    }
+
+    $veredicto = $datos_post['veredicto'];
+    $respuestas = [];
+    for ($i = 1; $i <= 6; $i++) { $respuestas['pregunta_'.$i] = $datos_post['pregunta_'.$i]; }
+    
     $datos_guardar = [
         'respuestas_formulario'   => json_encode($respuestas),
         'observaciones_generales' => $datos_post['observaciones_generales'],
-        'veredicto'               => $datos_post['veredicto'],
-        'argumento_rechazo'       => ($datos_post['veredicto'] === 'No Publicable') ? $datos_post['argumento_rechazo'] : null
+        'veredicto'               => $veredicto,
+        'argumento_rechazo'       => ($veredicto === 'No Publicable') ? $datos_post['argumento_rechazo'] : null
     ];
 
-    if (EvaluacionExtenso::guardarEvaluacion($evaluacion_id, $datos_guardar)) {
-        $pdf_url = BASE_URL . 'reporte/generarEvaluacionPDF/' . $evaluacion_id;
-        echo json_encode([
-            'mensaje' => 'Evaluación guardada. Ahora descarga el PDF para firmarlo.',
-            'pdf_url' => $pdf_url
-        ]);
+    if ($veredicto === 'Favorable y Publicable') {
+        if (EvaluacionExtenso::guardarEvaluacion($evaluacion_id, $datos_guardar, 'Pendiente de Firma')) {
+            $pdf_url = BASE_URL . 'reporte/generarEvaluacionPDF/' . $evaluacion_id;
+            echo json_encode([
+                'mensaje' => 'Evaluación favorable. Descarga el PDF para firmarlo.',
+                'pdf_url' => $pdf_url,
+                'requiere_firma' => true
+            ]);
+        } else {
+            http_response_code(500); echo json_encode(['error' => 'Error al guardar evaluación.']);
+        }
+
     } else {
-        http_response_code(500);
-        echo json_encode(['error' => 'No se pudo guardar la evaluación.']);
+        if (EvaluacionExtenso::guardarEvaluacion($evaluacion_id, $datos_guardar, 'Pendiente de Validación')) {
+            echo json_encode([
+                'mensaje' => 'Evaluación enviada al Coordinador.',
+                'requiere_firma' => false
+            ]);
+        } else {
+            http_response_code(500); echo json_encode(['error' => 'Error al guardar evaluación.']);
+        }
     }
 }
 /**

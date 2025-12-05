@@ -398,7 +398,6 @@ public function obtenerEvaluacionesExtenso($extenso_id) {
     if ($evaluaciones) {
         echo json_encode($evaluaciones);
     } else {
-        // Devuelve un array vacío si no hay evaluaciones, lo cual no es un error.
         echo json_encode([]);
     }
 }
@@ -426,7 +425,6 @@ public function condonarPago() {
         return;
     }
 
-    // Obtener datos del pago y usuario antes de modificar (para notificación)
     $pagoAntes = Pago::buscarPorId($pagoId);
     $usuario = null;
     if ($pagoAntes && !empty($pagoAntes['usuario_id'])) {
@@ -435,7 +433,6 @@ public function condonarPago() {
 
     $revisorId = $_SESSION['usuario_id'];
     if (Pago::condonarPago($pagoId, $revisorId)) {
-        // obtener estadísticas actualizadas para enviar al cliente
         $estadisticasActuales = Pago::obtenerEstadisticas();
 
         // Enviar correo al usuario notificando la condonación (si se encontró correo)
@@ -463,14 +460,12 @@ public function exportarPagos() {
     $estatusPagos = $_POST['estatus'] ?? [];
     $query = trim($_POST['query'] ?? '');
 
-    // Si no se especifican filtros, obtenemos todos los pagos
     if (empty($nombresRoles) && empty($estatusPagos)) {
         $pagos = Pago::obtenerTodosConDetalles();
     } else {
         $pagos = Pago::obtenerPagosFiltrados($nombresRoles, $estatusPagos);
     }
 
-    // Si se envió un query desde la vista, aplicarlo sobre los resultados
     if ($query !== '') {
         $q = mb_strtolower($query);
         $pagos = array_filter($pagos, function($p) use ($q) {
@@ -546,21 +541,25 @@ public function exportarPagos() {
 public function exportarAutoresParaMemorias() {
     if (!$this->autorizar()) return;
 
+    // 1. Obtener los datos (ahora incluyen 'autor_correo')
     $resumenes = Resumen::obtenerDatosPorMemorias(); 
 
     $datosCSV = [];
     foreach ($resumenes as $resumen) {
 
         $datos_comunes = [
-            'titulo_de_trabajo' => $resumen['titulo'],
-            'adscripcion1' => $resumen['adscripcion1'],
-            'adscripcion2' => $resumen['adscripcion2'],
-            'tipo_de_usuario' => $resumen['tipo_de_usuario']
+            'correo_autor_principal' => $resumen['autor_correo'],
+            'titulo_de_trabajo'      => $resumen['titulo'],
+            'adscripcion1'           => $resumen['adscripcion1'],
+            'adscripcion2'           => $resumen['adscripcion2'],
+            'tipo_de_usuario'        => $resumen['tipo_de_usuario'],
+            'autor_principal'         => $resumen['autor_principal']
         ];
 
         $todos_los_nombres_str = $resumen['autor_principal'] . "\n" . $resumen['coautores'];
 
         $nombres_individuales = preg_split('/[\n,\/]/', $todos_los_nombres_str);
+
         $nombres_limpios = [];
         foreach ($nombres_individuales as $nombre) {
             $nombre_limpio = trim($nombre); 
@@ -568,21 +567,319 @@ public function exportarAutoresParaMemorias() {
                 $nombres_limpios[] = $nombre_limpio;
             }
         }
+
         foreach ($nombres_limpios as $nombre_final) {
             $datosCSV[] = [
-                'autor' => $nombre_final
-            ] + $datos_comunes;
+                'autor_individual' => $nombre_final
+            ] + $datos_comunes; 
         }
     }
 
+    // Prefer UTF-8 output with BOM so Excel in Windows recognizes accents correctly
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename=reporte_autores_trabajos_' . date('Y-m-d') . '.csv');
-    $output = fopen('php://output', 'w');
+    // try to set locale for correct formatting (optional, may not be available on all systems)
+    @setlocale(LC_ALL, 'es_MX.UTF-8', 'es_ES.UTF-8', 'es.UTF-8');
 
-    fputcsv($output, ['Autor', 'Título del Trabajo', 'Adscripción 1', 'Adscripción 2', 'Tipo de Trabajo']);
+    $output = fopen('php://output', 'w');
+    // write UTF-8 BOM for Excel compatibility
+    fwrite($output, "\xEF\xBB\xBF");
+
+    $header = ['Autor/Coautor', 'Correo (Autor Principal)', 'Título del Trabajo', 'Adscripción 1', 'Adscripción 2', 'Tipo de Trabajo', 'Autor Principal'];
+    fputcsv($output, $header);
+
+    // helper to ensure UTF-8 encoding
+    $toUtf8 = function($v) {
+        if ($v === null) return '';
+        // normalize to string
+        $s = (string)$v;
+        // if not UTF-8, convert from probable encodings
+        if (!mb_check_encoding($s, 'UTF-8')) {
+            $s = mb_convert_encoding($s, 'UTF-8', 'ISO-8859-1');
+        }
+        return $s;
+    };
 
     foreach ($datosCSV as $fila) {
-        fputcsv($output, $fila);
+        $row = [
+            $toUtf8($fila['autor_individual'] ?? ''),
+            $toUtf8($fila['correo_autor_principal'] ?? ''),
+            $toUtf8($fila['titulo_de_trabajo'] ?? ''),
+            $toUtf8($fila['adscripcion1'] ?? ''),
+            $toUtf8($fila['adscripcion2'] ?? ''),
+            $toUtf8($fila['tipo_de_usuario'] ?? ''),
+            $toUtf8($fila['autor_principal'] ?? '')
+        ];
+        fputcsv($output, $row);
+    }
+
+    fclose($output);
+    exit;
+}
+/**
+ * Muestra la nueva página de Reportes y Estadísticas.
+ */
+public function reportes() {
+    if (!$this->autorizar()) return;
+
+    CSRFHelper::generateToken();
+
+    // Obtener áreas para los filtros
+    $areas = AreaTematica::obtenerTodas();
+
+    require_once BACKEND_ROOT . '/app/views/layout/header.php';
+    require_once BACKEND_ROOT . '/app/views/admin/reportes.php';
+    require_once BACKEND_ROOT . '/app/views/layout/footer.php';
+}
+/**
+ * Endpoint: devuelve estadísticas y series para los reportes.
+ * Parámetros GET opcionales: from (YYYY-MM-DD), to (YYYY-MM-DD)
+ */
+public function estadisticasReportes() {
+    header('Content-Type: application/json');
+    if (!$this->autorizar(['Administrador', 'Revisor de Pagos'])) return;
+
+    $from = $_GET['from'] ?? null;
+    $to = $_GET['to'] ?? null;
+
+    // Si no hay rango, tomar últimos 6 meses
+    if (!$to) $to = date('Y-m-d');
+    if (!$from) $from = date('Y-m-d', strtotime('-5 months', strtotime($to)));
+
+    $pdo = Database::conectar();
+
+    // KPIs (reusar método existente cuando sea posible)
+    $stats = Pago::obtenerEstadisticas();
+
+    // Ingresos por mes (agrupado por YYYY-MM)
+    $sql = "SELECT DATE_FORMAT(fecha_revision_pago, '%Y-%m') as mes, COALESCE(SUM(monto),0) as total
+            FROM pagos
+            WHERE estatus_pago = 'Aprobado' AND fecha_revision_pago BETWEEN :from AND :to
+            GROUP BY mes
+            ORDER BY mes";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(['from' => $from . ' 00:00:00', 'to' => $to . ' 23:59:59']);
+    $ingresosPorMes = $stmt->fetchAll();
+
+    // Pagos por tipo (en el rango)
+    $sql2 = "SELECT tipo_pago, COUNT(*) as cantidad, COALESCE(SUM(monto),0) as total FROM pagos
+             WHERE fecha_revision_pago BETWEEN :from AND :to
+             GROUP BY tipo_pago";
+    $stmt2 = $pdo->prepare($sql2);
+    $stmt2->execute(['from' => $from . ' 00:00:00', 'to' => $to . ' 23:59:59']);
+    $pagosPorTipo = $stmt2->fetchAll();
+
+    echo json_encode([
+        'stats' => $stats,
+        'ingresos_por_mes' => $ingresosPorMes,
+        'pagos_por_tipo' => $pagosPorTipo,
+        'range' => ['from' => $from, 'to' => $to]
+    ]);
+}
+
+/**
+ * Endpoint para DataTables (server-side): lista de pagos para el módulo de reportes.
+ * Acepta parámetros GET/POST de DataTables: draw, start, length, search[value]
+ * También acepta filtros opcionales: from, to (YYYY-MM-DD)
+ */
+public function listarPagosReportes() {
+    header('Content-Type: application/json');
+    if (!$this->autorizar(['Administrador', 'Revisor de Pagos'])) {
+        http_response_code(403);
+        echo json_encode(['error' => 'No autorizado']);
+        return;
+    }
+
+    try {
+        $request = $_REQUEST; // combina GET/POST
+        $draw = isset($request['draw']) ? (int)$request['draw'] : 1;
+    $start = isset($request['start']) ? (int)$request['start'] : 0;
+    $length = isset($request['length']) ? (int)$request['length'] : 25;
+    $search = $request['search']['value'] ?? '';
+    $from = $request['from'] ?? null;
+    $to = $request['to'] ?? null;
+
+        $pdo = Database::conectar();
+
+    // Base WHERE
+    $where = "WHERE 1=1";
+    $params = [];
+    if ($from) {
+        // include payments where fecha_revision_pago is within range
+        // or, if fecha_revision_pago is NULL, fall back to fecha_carga
+        $where .= " AND ((p.fecha_revision_pago IS NOT NULL AND p.fecha_revision_pago >= :from) OR (p.fecha_revision_pago IS NULL AND p.fecha_carga >= :from))";
+        $params['from'] = $from . ' 00:00:00';
+    }
+    if ($to) {
+        $where .= " AND ((p.fecha_revision_pago IS NOT NULL AND p.fecha_revision_pago <= :to) OR (p.fecha_revision_pago IS NULL AND p.fecha_carga <= :to))";
+        $params['to'] = $to . ' 23:59:59';
+    }
+    if (!empty($request['area_id'])) {
+        $where .= " AND res.area_id = :area_id";
+        $params['area_id'] = (int)$request['area_id'];
+    }
+    if (!empty($request['participant_type'])) {
+        $participant = $request['participant_type'];
+        // role-based types use an EXISTS subquery, amount-based types use monto
+        if (in_array($participant, ['Autor','Asistente con Cartel','Revisor','Revisor de Pagos'])) {
+            $where .= " AND EXISTS (SELECT 1 FROM usuario_roles ur2 JOIN roles rl2 ON ur2.rol_id = rl2.id WHERE ur2.usuario_id = u.id AND rl2.nombre_rol = :participant_role)";
+            $params['participant_role'] = $participant;
+        } elseif ($participant === 'Asistente Estudiante') {
+            $where .= " AND p.monto = 300";
+        } elseif ($participant === 'Asistente Profesionista') {
+            $where .= " AND p.monto = 1000";
+        }
+    }
+    if (!empty($search)) {
+        $where .= " AND (CAST(p.id AS CHAR) LIKE :q OR CAST(p.resumen_id AS CHAR) LIKE :q OR CAST(p.usuario_id AS CHAR) LIKE :q OR LOWER(u.nombre_completo) LIKE :q OR LOWER(u.institucion_procedencia) LIKE :q)";
+        $params['q'] = '%' . mb_strtolower($search) . '%';
+    }
+
+    // total records (without filters)
+    $totalSql = "SELECT COUNT(*) FROM pagos p";
+    $total = $pdo->query($totalSql)->fetchColumn();
+
+    // filtered count
+    $countSql = "SELECT COUNT(DISTINCT p.id) FROM pagos p JOIN usuarios u ON p.usuario_id = u.id LEFT JOIN resumenes res ON p.resumen_id = res.id LEFT JOIN usuario_roles ur ON u.id = ur.usuario_id JOIN roles r ON ur.rol_id = r.id " . $where;
+        $stmtCount = $pdo->prepare($countSql);
+        $stmtCount->execute($params);
+        $recordsFiltered = (int)$stmtCount->fetchColumn();
+
+    // fetch data
+    $dataSql = "SELECT p.id, p.resumen_id, p.usuario_id, u.nombre_completo, u.institucion_procedencia, GROUP_CONCAT(r.nombre_rol SEPARATOR ', ') as roles, p.tipo_pago, p.monto, p.estatus_pago, p.comprobante_ruta, p.fecha_revision_pago
+                FROM pagos p
+                JOIN usuarios u ON p.usuario_id = u.id
+                LEFT JOIN resumenes res ON p.resumen_id = res.id
+                LEFT JOIN usuario_roles ur ON u.id = ur.usuario_id
+                LEFT JOIN roles r ON ur.rol_id = r.id
+                " . $where . "
+                GROUP BY p.id
+                ORDER BY p.id DESC
+                LIMIT :start, :length";
+
+    // bind start/length as integers separately
+        $stmt = $pdo->prepare($dataSql);
+        foreach ($params as $k => $v) {
+            $stmt->bindValue(':' . $k, $v);
+        }
+        $stmt->bindValue(':start', (int)$start, PDO::PARAM_INT);
+        $stmt->bindValue(':length', (int)$length, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll();
+
+    // compute tipo de participante server-side and format rows for DataTables
+    $data = [];
+    foreach ($rows as $r) {
+        $rolesStr = $r['roles'] ?? '';
+        $monto = $r['monto'];
+        $tipoParticipante = '-';
+        if (is_string($rolesStr) && $rolesStr !== '') {
+            if (strpos($rolesStr, 'Autor') !== false) $tipoParticipante = 'Autor';
+            elseif (strpos($rolesStr, 'Asistente con Cartel') !== false) $tipoParticipante = 'Asistente con Cartel';
+            elseif (strpos($rolesStr, 'Revisor de Pagos') !== false) $tipoParticipante = 'Revisor de Pagos';
+            elseif (strpos($rolesStr, 'Revisor') !== false) $tipoParticipante = 'Revisor';
+        }
+        if ($tipoParticipante === '-' && is_numeric($monto)) {
+            if ($monto == 300) $tipoParticipante = 'Asistente Estudiante';
+            elseif ($monto == 1000) $tipoParticipante = 'Asistente Profesionista';
+        }
+        if ($tipoParticipante === '-' && !empty($rolesStr)) $tipoParticipante = $rolesStr;
+
+        $comprobanteHtml = empty($r['comprobante_ruta']) ? '<small class="text-muted">N/A</small>' : '<a href="' . (defined('BASE_URL') ? rtrim(BASE_URL, '/') : '') . '/archivo/ver/pagos/' . htmlspecialchars($r['comprobante_ruta']) . '" target="_blank">Ver</a>';
+
+        $data[] = [
+            $r['id'],
+            $r['resumen_id'] ?: '',
+            $r['usuario_id'] ?: '',
+            $r['nombre_completo'] ?: '',
+            $r['institucion_procedencia'] ?: '',
+            $r['tipo_pago'] ?: '',
+            $tipoParticipante,
+            number_format((float)$r['monto'], 2),
+            $r['estatus_pago'] ?: '',
+            $comprobanteHtml
+        ];
+    }
+
+        echo json_encode([
+            'draw' => $draw,
+            'recordsTotal' => (int)$total,
+            'recordsFiltered' => (int)$recordsFiltered,
+            'data' => $data
+        ]);
+    } catch (\Throwable $ex) {
+        http_response_code(500);
+        // send a JSON error so DataTables can show it (and avoid HTML/redirect responses)
+        echo json_encode(['error' => 'Server error: ' . $ex->getMessage()]);
+    }
+}
+
+/**
+ * Exportar CSV para los pagos en reportes (respeta filtros from/to y search)
+ */
+public function exportarPagosReportes() {
+    if (!$this->autorizar(['Administrador', 'Revisor de Pagos'])) return;
+
+    $from = $_POST['from'] ?? $_GET['from'] ?? null;
+    $to = $_POST['to'] ?? $_GET['to'] ?? null;
+    $search = $_POST['search'] ?? $_GET['search'] ?? '';
+
+    $pdo = Database::conectar();
+    $where = "WHERE 1=1";
+    $params = [];
+    if ($from) { $where .= " AND p.fecha_revision_pago >= :from"; $params['from'] = $from . ' 00:00:00'; }
+    if ($to) { $where .= " AND p.fecha_revision_pago <= :to"; $params['to'] = $to . ' 23:59:59'; }
+    if (!empty($search)) { $where .= " AND (CAST(p.id AS CHAR) LIKE :q OR CAST(p.resumen_id AS CHAR) LIKE :q OR CAST(p.usuario_id AS CHAR) LIKE :q OR LOWER(u.nombre_completo) LIKE :q)"; $params['q'] = '%' . mb_strtolower($search) . '%'; }
+
+    $sql = "SELECT p.id, p.resumen_id, p.usuario_id, u.nombre_completo, u.institucion_procedencia, GROUP_CONCAT(r.nombre_rol SEPARATOR ', ') as roles, p.tipo_pago, p.monto, p.estatus_pago, p.comprobante_ruta, p.fecha_revision_pago
+            FROM pagos p
+            JOIN usuarios u ON p.usuario_id = u.id
+            LEFT JOIN usuario_roles ur ON u.id = ur.usuario_id
+            LEFT JOIN roles r ON ur.rol_id = r.id
+            " . $where . "
+            GROUP BY p.id
+            ORDER BY p.id DESC";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $rows = $stmt->fetchAll();
+
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=reporte_pagos_detalle_' . date('Y-m-d') . '.csv');
+    $output = fopen('php://output', 'w');
+    fwrite($output, "\xEF\xBB\xBF");
+    fputcsv($output, ['ID Pago','Resumen ID','ID Usuario','Nombre Usuario','Institución','Tipo Pago','Tipo Participante','Monto','Estatus','Comprobante','Fecha Revision']);
+
+    foreach ($rows as $r) {
+        // determinar tipo participante
+        $rolesStr = $r['roles'] ?? '';
+        $monto = $r['monto'];
+        $tipoParticipante = '-';
+        if (is_string($rolesStr) && $rolesStr !== '') {
+            if (strpos($rolesStr, 'Autor') !== false) $tipoParticipante = 'Autor';
+            elseif (strpos($rolesStr, 'Asistente con Cartel') !== false) $tipoParticipante = 'Asistente con Cartel';
+            elseif (strpos($rolesStr, 'Revisor de Pagos') !== false) $tipoParticipante = 'Revisor de Pagos';
+            elseif (strpos($rolesStr, 'Revisor') !== false) $tipoParticipante = 'Revisor';
+        }
+        if ($tipoParticipante === '-' && is_numeric($monto)) {
+            if ($monto == 300) $tipoParticipante = 'Asistente Estudiante';
+            elseif ($monto == 1000) $tipoParticipante = 'Asistente Profesionista';
+        }
+        if ($tipoParticipante === '-' && !empty($rolesStr)) $tipoParticipante = $rolesStr;
+
+        fputcsv($output, [
+            $r['id'],
+            $r['resumen_id'],
+            $r['usuario_id'],
+            $r['nombre_completo'],
+            $r['institucion_procedencia'],
+            $r['tipo_pago'],
+            $tipoParticipante,
+            $r['monto'],
+            $r['estatus_pago'],
+            $r['comprobante_ruta'],
+            $r['fecha_revision_pago']
+        ]);
     }
 
     fclose($output);

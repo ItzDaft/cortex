@@ -111,6 +111,13 @@
                 <?php if (in_array('Administrador', $_SESSION['usuario_roles'])): ?>
                     <div class="col-md-6 col-lg-4"><a href="<?php echo BASE_URL; ?>administrador/dashboard" class="btn btn-dark btn-lg w-100 p-3"><i class="bi bi-speedometer2 me-2"></i>Panel Admin</a></div>
                 <?php endif; ?>
+                <?php if (in_array('Administrador', $_SESSION['usuario_roles'])): ?>
+                <div class="col-md-6 col-lg-4">
+                    <a href="<?php echo BASE_URL; ?>administrador/reportes" class="btn btn-warning btn-lg w-100 p-3">
+                        <i class="bi bi-graph-up me-2"></i>Reportes y Estadísticas
+                    </a>
+                </div>
+                <?php endif; ?>
                 <?php if (in_array('Coordinador', $_SESSION['usuario_roles'])): ?>
                     <div class="col-md-6 col-lg-4"><a href="<?php echo BASE_URL; ?>coordinador/dashboard" class="btn btn-dark btn-lg w-100 p-3"><i class="bi bi-kanban me-2"></i>Panel Coordinador</a></div>
                 <?php endif; ?>

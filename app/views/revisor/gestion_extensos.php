@@ -105,8 +105,6 @@
                                         Cambiar Revisores
                                     </button>
                                 </td>
-                                <td>
-                                    </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -200,21 +198,21 @@
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // --- VARIABLES GLOBALES Y DE CONFIGURACIÓN ---
+    // --- VARIABLES GLOBALES ---
     const baseUrl = '<?php echo BASE_URL; ?>';
     const csrfToken = '<?php echo $_SESSION["csrf_token"] ?? ""; ?>';
     const mensajeDiv = document.getElementById('mensaje-gestion');
-        const asignarModal = new bootstrap.Modal(document.getElementById('asignarModal'));
-    const asignarForm = document.getElementById('asignarForm');
+
+    // --- MODALES ---
+    const asignarModal = new bootstrap.Modal(document.getElementById('asignarModal'));
     const devolverModal = new bootstrap.Modal(document.getElementById('devolverModal'));
-    const devolverForm = document.getElementById('devolverForm');
     const cambiarRevisoresModal = new bootstrap.Modal(document.getElementById('cambiarRevisoresModal'));
+    // Asegúrate de que este ID exista en tu HTML
+    const tercerRevisorModalEl = document.getElementById('tercerRevisorModal');
+    const tercerRevisorModal = tercerRevisorModalEl ? new bootstrap.Modal(tercerRevisorModalEl) : null;
     const cambiarRevisoresForm = document.getElementById('cambiarRevisoresForm');
-    const tercerRevisorModal = new bootstrap.Modal(document.getElementById('tercerRevisorModal'));
-    const tercerRevisorForm = document.getElementById('tercerRevisorForm');
 
-
-    // --- LISTENER DE CLICS PARA ABRIR MODALES ---
+    // --- LISTENER UNIFICADO DE CLICS (Abrir modales) ---
     document.body.addEventListener('click', function(event) {
         const target = event.target;
         const extensoId = target.getAttribute('data-extenso-id');
@@ -242,63 +240,84 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    asignarForm.addEventListener('submit', function(event) {
-        event.preventDefault();
-        const revisoresSeleccionados = this.querySelectorAll('input[name="revisores_ids[]"]:checked');
-        if (revisoresSeleccionados.length !== 2) {
-            alert('Debe seleccionar exactamente dos revisores.');
-            return;
-        }
-        const revisoresIds = Array.from(revisoresSeleccionados).map(cb => cb.value);
-        const extensoId = document.getElementById('extenso_id_asignar').value;
-        const datos = { extenso_id: extensoId, revisores_ids: revisoresIds, csrf_token: csrfToken };
-        fetch(`${baseUrl}revisor/asignarRevisoresExtenso`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
-            .then(res => res.json()).then(data => {
-                alert(data.mensaje || data.error);
-                if (!data.error) location.reload();
-            });
-    });
+    // --- LISTENER UNIFICADO DE ENVÍOS (Procesar TODOS los formularios aquí) ---
+    document.body.addEventListener('submit', function(event) {
+        const form = event.target;
 
-    cambiarRevisoresForm.addEventListener('submit', function(event) {
-        event.preventDefault();
-        const revisoresSeleccionados = this.querySelectorAll('input[name="revisores_ids_change[]"]:checked');
-        if (revisoresSeleccionados.length !== 2) {
-            alert('Debe seleccionar exactamente dos revisores.');
-            return;
-        }
-        const revisoresIds = Array.from(revisoresSeleccionados).map(cb => cb.value);
-        const extensoId = document.getElementById('extenso_id_cambiar').value;
-        const datos = { extenso_id: extensoId, revisores_ids: revisoresIds, csrf_token: csrfToken };
-        fetch(`${baseUrl}revisor/actualizarRevisoresExtenso`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
-            .then(res => res.json()).then(data => {
-                alert(data.mensaje || data.error);
-                if (!data.error) location.reload();
-            });
-    });
-
-    devolverForm.addEventListener('submit', function(event) {
-        event.preventDefault();
-        const extensoId = document.getElementById('extenso_id_devolver').value;
-        const comentarios = document.getElementById('comentarios_formato').value;
-        const datos = { extenso_id: extensoId, comentarios: comentarios, csrf_token: csrfToken };
-        fetch(`${baseUrl}revisor/devolverExtensoPorFormato`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) })
-            .then(res => res.json()).then(data => {
-                alert(data.mensaje || data.error);
-                if (!data.error) location.reload();
-            });
-    });
-        tercerRevisorForm.addEventListener('submit', function(event) {
+        // 1. Devolver por Formato
+        if (form.id === 'devolverForm') {
             event.preventDefault();
-            const revisorSeleccionado = document.querySelector('input[name="revisor_id"]:checked');
+            const extensoId = document.getElementById('extenso_id_devolver').value;
+            const comentarios = document.getElementById('comentarios_formato').value;
+            
+            if (!extensoId || !comentarios) {
+                alert('Por favor completa todos los campos.');
+                return;
+            }
+
+            const datos = { extenso_id: extensoId, comentarios: comentarios, csrf_token: csrfToken };
+            fetch(`${baseUrl}revisor/devolverExtensoPorFormato`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos)
+            })
+            .then(res => res.json()).then(data => {
+                alert(data.mensaje || data.error);
+                if (!data.error) location.reload();
+            });
+        }
+
+        // 2. Asignar Revisores
+        if (form.id === 'asignarForm') {
+            event.preventDefault();
+            const revisoresSeleccionados = form.querySelectorAll('input[name="revisores_ids[]"]:checked');
+            if (revisoresSeleccionados.length !== 2) {
+                alert('Debe seleccionar exactamente dos revisores.');
+                return;
+            }
+            const revisoresIds = Array.from(revisoresSeleccionados).map(cb => cb.value);
+            const extensoId = document.getElementById('extenso_id_asignar').value;
+            const datos = { extenso_id: extensoId, revisores_ids: revisoresIds, csrf_token: csrfToken };
+
+            fetch(`${baseUrl}revisor/asignarRevisoresExtenso`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos)
+            })
+            .then(res => res.json()).then(data => {
+                alert(data.mensaje || data.error);
+                if (!data.error) location.reload();
+            });
+        }
+        
+        // 3. Cambiar Revisores
+        if (form.id === 'cambiarRevisoresForm') {
+            event.preventDefault();
+            const revisoresSeleccionados = form.querySelectorAll('input[name="revisores_ids_change[]"]:checked');
+            if (revisoresSeleccionados.length !== 2) {
+                alert('Debe seleccionar exactamente dos revisores.');
+                return;
+            }
+            const revisoresIds = Array.from(revisoresSeleccionados).map(cb => cb.value);
+            const extensoId = document.getElementById('extenso_id_cambiar').value;
+            const datos = { extenso_id: extensoId, revisores_ids: revisoresIds, csrf_token: csrfToken };
+
+            fetch(`${baseUrl}revisor/actualizarRevisoresExtenso`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos)
+            })
+            .then(res => res.json()).then(data => {
+                alert(data.mensaje || data.error);
+                if (!data.error) location.reload();
+            });
+        }
+
+        // 4. Asignar Tercer Revisor
+        if (form.id === 'tercerRevisorForm') {
+            event.preventDefault();
+            const revisorSeleccionado = form.querySelector('input[name="revisor_id"]:checked');
             if (!revisorSeleccionado) {
                 alert('Debe seleccionar un revisor.');
                 return;
             }
-            const datos = {
-                extenso_version_id: document.getElementById('extenso_id_tercero').value, // Simulación
-                revisor_id: revisorSeleccionado.value,
-                csrf_token: csrfToken
-            };
+            const extensoId = document.getElementById('extenso_id_tercero').value;
+            const datos = { extenso_id: extensoId, revisor_id: revisorSeleccionado.value, csrf_token: csrfToken };
+            
             fetch(`${baseUrl}revisor/asignarTercerRevisor`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos)
             })
@@ -306,89 +325,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert(data.mensaje || data.error);
                 if (!data.error) location.reload();
             });
-        });
-document.body.addEventListener('submit', function(event) {
-    const form = event.target; 
-    console.log("Paso 3: Se detectó un envío de formulario. ID del formulario:", form.id);
-
-       if (form.id === 'devolverForm') {
-            console.log("Paso 4: El formulario 'devolverForm' fue identificado.");
-            event.preventDefault(); // Detenemos el envío para depurar
-
-            const extensoId = document.getElementById('extenso_id_devolver').value;
-            const comentarios = document.getElementById('comentarios_formato').value;
-
-            if (!extensoId || !comentarios) {
-                alert("ERROR DE DEPURACIÓN: El ID del extenso o los comentarios están vacíos.");
-                return;
-            }
-
-            alert("¡ÉXITO! El formulario 'devolverForm' está listo para enviar la petición fetch. Revisa la consola para ver los datos.");
-            console.log("Datos que se enviarían:", {
-                extenso_id: extensoId,
-                comentarios: comentarios,
-                csrf_token: csrfToken
-            });
         }
-
-    if (form.id === 'asignarForm') {
-        event.preventDefault();
-        const revisoresSeleccionados = form.querySelectorAll('input[name="revisores_ids[]"]:checked');
-        if (revisoresSeleccionados.length !== 2) {
-            alert('Debe seleccionar exactamente dos revisores.');
-            return;
-        }
-        const revisoresIds = Array.from(revisoresSeleccionados).map(cb => cb.value);
-        const extensoId = document.getElementById('extenso_id_asignar').value;
-        const datos = { extenso_id: extensoId, revisores_ids: revisoresIds, csrf_token: csrfToken };
-
-        fetch(`${baseUrl}revisor/asignarRevisoresExtenso`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos)
-        })
-        .then(res => res.json()).then(data => {
-            alert(data.mensaje || data.error);
-            if (!data.error) location.reload();
-        });
-    }
-    
-    if (form.id === 'cambiarRevisoresForm') {
-        event.preventDefault();
-        const revisoresSeleccionados = form.querySelectorAll('input[name="revisores_ids_change[]"]:checked');
-        if (revisoresSeleccionados.length !== 2) {
-            alert('Debe seleccionar exactamente dos revisores.');
-            return;
-        }
-        const revisoresIds = Array.from(revisoresSeleccionados).map(cb => cb.value);
-        const extensoId = document.getElementById('extenso_id_cambiar').value;
-        const datos = { extenso_id: extensoId, revisores_ids: revisoresIds, csrf_token: csrfToken };
-
-        fetch(`${baseUrl}revisor/actualizarRevisoresExtenso`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos)
-        })
-        .then(res => res.json()).then(data => {
-            alert(data.mensaje || data.error);
-            if (!data.error) location.reload();
-        });
-    }
-
-    if (form.id === 'tercerRevisorForm') {
-        event.preventDefault();
-        const revisorSeleccionado = form.querySelector('input[name="revisor_id"]:checked');
-        if (!revisorSeleccionado) {
-            alert('Debe seleccionar un revisor.');
-            return;
-        }
-        const extensoId = document.getElementById('extenso_id_tercero').value;
-        const datos = { extenso_id: extensoId, revisor_id: revisorSeleccionado.value, csrf_token: csrfToken };
-        
-        fetch(`${baseUrl}revisor/asignarTercerRevisor`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos)
-        })
-        .then(res => res.json()).then(data => {
-            alert(data.mensaje || data.error);
-            if (!data.error) location.reload();
-        });
-    }
-});
+    });
 });
 </script>
