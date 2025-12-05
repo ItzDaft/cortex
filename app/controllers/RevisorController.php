@@ -305,41 +305,8 @@ public function validarEvaluacionFirmada() {
         
         if ($accion === 'Validada') {
             $evaluacionActual = EvaluacionExtenso::buscarPorId($evaluacion_id);
-            $evaluacionesValidadas = EvaluacionExtenso::obtenerEvaluacionesValidadas($evaluacionActual['extenso_version_id']);
-            $numEvaluaciones = count($evaluacionesValidadas);
-            $estatus_final_extenso = '';
-
-            if ($numEvaluaciones >= 2) {
-                $veredictos = array_column($evaluacionesValidadas, 'veredicto');
-                $conteos = array_count_values($veredictos);
-                $aceptados = $conteos['Favorable y Publicable'] ?? 0;
-                $conCorrecciones = $conteos['Favorable con Correcciones'] ?? 0;
-                $rechazados = $conteos['No Publicable'] ?? 0;
-
-                if ($numEvaluaciones >= 3) {
-                    if ($rechazados >= 2) $estatus_final_extenso = 'Rechazado';
-                    elseif ($aceptados >= 2) $estatus_final_extenso = 'Aceptado Final';
-                    elseif ($conCorrecciones >= 2) $estatus_final_extenso = 'Aceptado con Correcciones';
-                } elseif ($numEvaluaciones == 2) { // Lógica para 2 evaluaciones
-                    if ($rechazados == 2) $estatus_final_extenso = 'Rechazado';
-                    elseif ($aceptados == 2) $estatus_final_extenso = 'Aceptado Final';
-                    elseif ($conCorrecciones > 0 && $rechazados == 0) $estatus_final_extenso = 'Aceptado con Correcciones';
-                    elseif ($rechazados == 1 && ($aceptados == 1 || $conCorrecciones == 1)) $estatus_final_extenso = 'Conflicto';
-                }
-                
-                if (!empty($estatus_final_extenso)) {
-                    $extenso = Extenso::buscarPorVersionId($evaluacionActual['extenso_version_id']);
-                    Extenso::actualizarEstatus($extenso['id'], $estatus_final_extenso);
-                    
-                    $autor = Usuario::buscarPorId($extenso['autor_id']);
-                    MailHelper::enviarCorreo(
-                        $autor['correo'], 
-                        $autor['nombre_completo'], 
-                        'Decisión Final sobre tu Artículo Extenso', 
-                        "<h1>Hola {$autor['nombre_completo']}</h1><p>Tu artículo ha sido procesado con un veredicto final de: <strong>{$estatus_final_extenso}</strong>. Por favor, inicia sesión en el sistema para ver los comentarios de los revisores y los siguientes pasos.</p>"
-                    );
-                }
-            }
+            // Use the centralized consensus logic
+            EvaluacionExtenso::verificarConsenso($evaluacionActual['extenso_version_id']);
         }
 
         echo json_encode(['mensaje' => 'Evaluación procesada con éxito.']);
@@ -416,9 +383,18 @@ public function gestionExtensos() {
         echo "Error: No tienes un área de especialización asignada.";
         return;
     }
+    // List 1: Pendientes de Validacion de Formato (Stage A)
+    $extensosPendientesFiltro = Extenso::obtenerPendientesDeFiltroPorArea($coordinadorArea['area_id']);
+
+    // List 2: Pendientes de Asignacion (Stage B - Validado)
+    $extensosPorAsignar = Extenso::obtenerPendientesDeAsignacionPorArea($coordinadorArea['area_id']);
+
+    // List 3: En Revision
     $extensosEnRevision = Extenso::obtenerEnRevisionPorArea($coordinadorArea['area_id']);
 
-    $extensosParaFiltro = Extenso::obtenerPendientesDeFiltroPorArea($coordinadorArea['area_id']);
+    // List 4: Conflicto
+    $extensosEnConflicto = Extenso::obtenerEnConflictoPorArea($coordinadorArea['area_id']);
+
 
     $revisoresDisponibles = Usuario::buscarRevisoresExtensosPorArea($coordinadorArea['area_id']);
 
@@ -426,6 +402,26 @@ public function gestionExtensos() {
     require_once BACKEND_ROOT . '/app/views/layout/header.php';
     require_once BACKEND_ROOT . '/app/views/revisor/gestion_extensos.php'; 
     require_once BACKEND_ROOT . '/app/views/layout/footer.php';
+}
+
+/**
+ * (API) Aprueba el formato de un extenso, moviendolo a la etapa de asignacion.
+ */
+public function aprobarFormatoExtenso() {
+    header('Content-Type: application/json');
+    if (!$this->autorizar()) return;
+
+    $datos = json_decode(file_get_contents('php://input'), true);
+    if (empty($datos['extenso_id'])) {
+        http_response_code(400); echo json_encode(['error' => 'Se requiere el ID del extenso.']); return;
+    }
+
+    // Cambiar estatus a 'Pendiente de Asignacion' (o 'Validado', usaremos 'Pendiente de Asignacion' como acordado)
+    if (Extenso::actualizarEstatus($datos['extenso_id'], 'Pendiente de Asignacion')) {
+        echo json_encode(['mensaje' => 'Formato aprobado. El artículo está listo para asignación.']);
+    } else {
+        http_response_code(500); echo json_encode(['error' => 'No se pudo aprobar el formato.']);
+    }
 }
 /**
  * (API) Obtiene los IDs de los revisores actualmente asignados a un extenso.
