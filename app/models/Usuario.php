@@ -323,7 +323,7 @@ public static function buscarRevisoresExtensosPorArea(int $area_id): array {
     $pdo = Database::conectar();
     $sql = "SELECT 
                 u.id, u.nombre_completo, u.correo,
-                p.grado_academico, p.area_especialidad,
+                p.grado_academico, p.area_especialidad, p.foto_ruta, p.comprobante_sni_ruta,
                 COUNT(ee.id) as carga_actual
             FROM usuarios u
             JOIN usuario_roles ur ON u.id = ur.usuario_id
