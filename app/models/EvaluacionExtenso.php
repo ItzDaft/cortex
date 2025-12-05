@@ -36,7 +36,7 @@ public static function buscarAsignadasPorRevisor(int $revisor_id): array {
             JOIN resumenes r ON e.resumen_id = r.id
             JOIN usuarios u ON ee.revisor_id = u.id
             WHERE ee.revisor_id = :revisor_id 
-            AND ee.estatus_evaluacion IN ('Pendiente de Firma', 'Pendiente de Validación')
+            AND (ee.estatus_evaluacion IS NULL OR ee.estatus_evaluacion = 'Pendiente')
             AND r.area_id = u.area_id"; 
     $stmt = $pdo->prepare($sql);
     $stmt->execute(['revisor_id' => $revisor_id]);
@@ -63,8 +63,7 @@ public static function guardarEvaluacion(int $evaluacion_id, array $datos): bool
                 respuestas_formulario = :respuestas_formulario,
                 observaciones_generales = :observaciones_generales,
                 veredicto = :veredicto,
-                argumento_rechazo = :argumento_rechazo,
-                estatus_evaluacion = 'Pendiente de Validación' -- Cambia el estado
+                argumento_rechazo = :argumento_rechazo
             WHERE id = :evaluacion_id";
 
     $stmt = $pdo->prepare($sql);
@@ -260,5 +259,125 @@ public static function actualizarRevisores(int $extenso_version_id, array $revis
         error_log($e->getMessage());
         return false;
     }
+}
+
+/**
+ * Verifica si hay consenso en las evaluaciones y actualiza el estatus del extenso si corresponde.
+ */
+public static function verificarConsenso(int $extenso_version_id): void {
+    $evaluaciones = self::obtenerEvaluacionesValidadas($extenso_version_id);
+    $numEvaluaciones = count($evaluaciones);
+
+    // Esperamos 2 evaluaciones minimas para decidir
+    if ($numEvaluaciones < 2) return;
+
+    // Conteo de veredictos
+    $veredictos = array_column($evaluaciones, 'veredicto');
+    $conteos = array_count_values($veredictos);
+
+    $aceptados = $conteos['Favorable y Publicable'] ?? 0;
+    $conCorrecciones = $conteos['Favorable con Correcciones'] ?? 0;
+    $rechazados = $conteos['No Publicable'] ?? 0;
+
+    $estatus_final_extenso = '';
+
+    // Caso: 3ra evaluación (Desempate)
+    if ($numEvaluaciones >= 3) {
+        // Mayoría simple
+        if ($rechazados >= 2) $estatus_final_extenso = 'Rechazado';
+        elseif ($aceptados >= 2) $estatus_final_extenso = 'Aceptado Final';
+        elseif ($conCorrecciones >= 2) $estatus_final_extenso = 'Aceptado con Correcciones';
+        else {
+             // Caso borde mixto (1 Aceptado, 1 Rechazado, 1 Correccion) -> Aceptado con Correcciones (preferencia positiva)
+             $estatus_final_extenso = 'Aceptado con Correcciones';
+        }
+    }
+    // Caso: 2 evaluaciones (Estándar)
+    elseif ($numEvaluaciones == 2) {
+        if ($rechazados == 2) {
+            $estatus_final_extenso = 'Rechazado';
+        } elseif ($aceptados == 2) {
+            $estatus_final_extenso = 'Aceptado Final';
+        } elseif ($aceptados == 1 && $rechazados == 1) {
+            $estatus_final_extenso = 'Conflicto';
+        } else {
+            // Cualquier otra combinación (ej. 1 Aceptado + 1 Correccion, 2 Correcciones, 1 Rechazado + 1 Correccion)
+            // se dicta Aceptado con Correcciones (según regla "Otros casos")
+            $estatus_final_extenso = 'Aceptado con Correcciones';
+        }
+    }
+
+    if (!empty($estatus_final_extenso)) {
+        $extenso = Extenso::buscarPorVersionId($extenso_version_id);
+
+        // Si ya estaba en conflicto y llega la 3ra, actualizamos.
+        // Si estaba En Revisión y llegan las 2 primeras, actualizamos.
+        Extenso::actualizarEstatus($extenso['id'], $estatus_final_extenso);
+
+        // Notificacion solo si es un estado final o corrección
+        if ($estatus_final_extenso !== 'Conflicto') {
+            $autor = Usuario::buscarPorId($extenso['autor_id']);
+            MailHelper::enviarCorreo(
+                $autor['correo'],
+                $autor['nombre_completo'],
+                'Actualización sobre tu Artículo Extenso',
+                "<h1>Hola {$autor['nombre_completo']}</h1><p>El estatus de tu artículo ha cambiado a: <strong>{$estatus_final_extenso}</strong>. Por favor ingresa a la plataforma para ver detalles.</p>"
+            );
+        }
+    }
+}
+
+/**
+ * Replica la asignación de revisores de una versión anterior a una nueva.
+ */
+public static function replicarAsignacion(int $version_anterior_id, int $nueva_version_id): bool {
+    $revisores_ids = self::obtenerIdsRevisoresAsignados($version_anterior_id);
+    if (empty($revisores_ids)) return false;
+
+    return self::asignarRevisores($nueva_version_id, $revisores_ids);
+}
+
+/**
+ * Busca las evaluaciones que están pendientes de firma (Favorable y Publicable) para un revisor.
+ */
+public static function buscarPorFirmarPorRevisor(int $revisor_id): array {
+    $pdo = Database::conectar();
+    $sql = "SELECT ee.*, ev.intento, r.titulo
+            FROM evaluaciones_extensos ee
+            JOIN extenso_versiones ev ON ee.extenso_version_id = ev.id
+            JOIN extensos e ON ev.extenso_id = e.id
+            JOIN resumenes r ON e.resumen_id = r.id
+            WHERE ee.revisor_id = :revisor_id
+            AND ee.estatus_evaluacion = 'Pendiente de Firma'";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(['revisor_id' => $revisor_id]);
+    return $stmt->fetchAll();
+}
+
+/**
+ * Obtiene los detalles de todas las asignaciones de extensos en un área para supervisión.
+ */
+public static function obtenerDetallesDeAsignacionesPorArea(int $area_id): array {
+    $pdo = Database::conectar();
+    $sql = "SELECT
+                ee.id as evaluacion_id,
+                r.titulo as titulo_articulo,
+                u.nombre_completo as nombre_revisor,
+                ee.estatus_evaluacion,
+                ee.veredicto,
+                ee.respuestas_formulario,
+                ee.observaciones_generales,
+                ee.pdf_firmado_ruta,
+                ev.archivo_ruta as archivo_articulo
+            FROM evaluaciones_extensos ee
+            JOIN extenso_versiones ev ON ee.extenso_version_id = ev.id
+            JOIN extensos e ON ev.extenso_id = e.id
+            JOIN resumenes r ON e.resumen_id = r.id
+            JOIN usuarios u ON ee.revisor_id = u.id
+            WHERE r.area_id = :area_id
+            ORDER BY e.id DESC, u.nombre_completo";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(['area_id' => $area_id]);
+    return $stmt->fetchAll();
 }
 }
