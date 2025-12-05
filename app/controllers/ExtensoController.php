@@ -85,7 +85,8 @@ public function procesarReenvio($extenso_id) {
     try {
         $pdo->beginTransaction();
 
-        EvaluacionExtenso::eliminarEvaluacionesAnteriores($extenso_id);
+        // NO eliminamos evaluaciones anteriores para mantener el historial
+        // EvaluacionExtenso::eliminarEvaluacionesAnteriores($extenso_id);
 
         $directorioSubida = BACKEND_ROOT . '/uploads/extensos/';
         $archivo = $_FILES['archivo_extenso'];

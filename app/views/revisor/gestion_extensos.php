@@ -4,9 +4,10 @@
 <?php CSRFHelper::getTokenInput(); ?>
 <div id="mensaje-gestion"></div>
 
-<h3 class="mt-4">Artículos Extensos Pendientes de Filtro</h3>
-<p class="text-muted">Revisa que cada artículo cumpla con el formato anónimo antes de asignarlo.</p>
-<div class="card">
+<!-- STAGE A: Validacion de Formato -->
+<h3 class="mt-4 text-primary">Etapa A: Pendientes de Validación de Formato</h3>
+<p class="text-muted">Revisa que el archivo sea anónimo y cumpla con la estructura.</p>
+<div class="card mb-4">
     <div class="card-body">
         <div class="table-responsive">
             <table class="table table-hover">
@@ -18,17 +19,17 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (empty($extensosParaFiltro)): ?>
-                        <tr><td colspan="3" class="text-center">No hay artículos por filtrar en tu área.</td></tr>
+                    <?php if (empty($extensosPendientesFiltro)): ?>
+                        <tr><td colspan="3" class="text-center">No hay artículos pendientes de validación de formato.</td></tr>
                     <?php else: ?>
-                        <?php foreach ($extensosParaFiltro as $extenso): ?>
+                        <?php foreach ($extensosPendientesFiltro as $extenso): ?>
                             <tr>
                                 <td><?php echo $extenso['id']; ?></td>
                                 <td><?php echo htmlspecialchars($extenso['titulo']); ?></td>
                                 <td>
                                     <a href="<?php echo BASE_URL; ?>archivo/ver/extensos/<?php echo $extenso['archivo_ruta']; ?>" target="_blank" class="btn btn-sm btn-secondary">Ver Archivo</a>
-                                    <button class="btn btn-sm btn-primary btn-asignar" data-extenso-id="<?php echo $extenso['id']; ?>" data-bs-toggle="modal" data-bs-target="#asignarModal">Asignar</button>
-                                    <button class="btn btn-sm btn-warning btn-devolver" data-extenso-id="<?php echo $extenso['id']; ?>" data-bs-toggle="modal" data-bs-target="#devolverModal">Devolver por Formato</button>
+                                    <button class="btn btn-sm btn-success btn-aprobar-formato" data-extenso-id="<?php echo $extenso['id']; ?>">Aprobar Formato</button>
+                                    <button class="btn btn-sm btn-warning btn-devolver" data-extenso-id="<?php echo $extenso['id']; ?>" data-bs-toggle="modal" data-bs-target="#devolverModal">Devolver</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -38,48 +39,45 @@
         </div>
     </div>
 </div>
-<div class="modal fade" id="asignarModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header"><h5 class="modal-title">Asignar Revisores de Extensos</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-      <div class="modal-body">
-        <p>Selecciona **dos** revisores para el artículo.</p>
-        <form id="asignarForm">
-            <input type="hidden" id="extenso_id_asignar">
-            <div id="revisores-container">
-                <?php foreach ($revisoresDisponibles as $rev): ?>
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox" name="revisores_ids[]" value="<?php echo $rev['id']; ?>" id="rev-<?php echo $rev['id']; ?>">
-                  <label class="form-check-label" for="rev-<?php echo $rev['id']; ?>">
-                    <?php echo htmlspecialchars($rev['nombre_completo']); ?> (<?php echo $rev['carga_actual']; ?>/4 asignados)
-                  </label>
-                </div>
-                <?php endforeach; ?>
-            </div>
-        </form>
-      </div>
-      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" form="asignarForm" class="btn btn-primary">Confirmar Asignación</button></div>
+
+<!-- STAGE B: Asignacion de Revisores -->
+<h3 class="mt-4 text-primary">Etapa B: Extensos Listos para Asignación</h3>
+<p class="text-muted">Artículos con formato validado. Asigna 2 revisores pares ciegos.</p>
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Título del Artículo</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($extensosPorAsignar)): ?>
+                        <tr><td colspan="3" class="text-center">No hay artículos esperando asignación.</td></tr>
+                    <?php else: ?>
+                        <?php foreach ($extensosPorAsignar as $extenso): ?>
+                            <tr>
+                                <td><?php echo $extenso['id']; ?></td>
+                                <td><?php echo htmlspecialchars($extenso['titulo']); ?></td>
+                                <td>
+                                    <a href="<?php echo BASE_URL; ?>archivo/ver/extensos/<?php echo $extenso['archivo_ruta']; ?>" target="_blank" class="btn btn-sm btn-secondary">Ver Archivo</a>
+                                    <button class="btn btn-sm btn-primary btn-asignar" data-extenso-id="<?php echo $extenso['id']; ?>" data-bs-toggle="modal" data-bs-target="#asignarModal">Asignar Revisores</button>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
-  </div>
 </div>
 
-<div class="modal fade" id="devolverModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header"><h5 class="modal-title">Devolver Artículo por Formato</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-      <div class="modal-body">
-        <p>Escribe las observaciones para que el autor corrija el formato (ej. "El archivo debe ser anónimo, por favor, elimina tus datos personales").</p>
-        <form id="devolverForm">
-            <input type="hidden" id="extenso_id_devolver">
-            <textarea class="form-control" id="comentarios_formato" rows="4" required></textarea>
-        </form>
-      </div>
-      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" form="devolverForm" class="btn btn-warning">Enviar Observaciones al Autor</button></div>
-    </div>
-  </div>
-</div>
-<h3 class="mt-5">Artículos Actualmente en Revisión</h3>
-<div class="card">
+<!-- STAGE C: En Revision -->
+<h3 class="mt-4 text-info">Etapa C: Artículos en Revisión</h3>
+<div class="card mb-4">
     <div class="card-body">
         <div class="table-responsive">
             <table class="table table-hover">
@@ -113,6 +111,118 @@
         </div>
     </div>
 </div>
+
+<!-- STAGE D: Conflictos -->
+<?php if (!empty($extensosEnConflicto)): ?>
+<h3 class="mt-4 text-danger">Conflictos (Requiere Desempate)</h3>
+<div class="card mb-4 border-danger">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Título del Artículo</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($extensosEnConflicto as $extenso): ?>
+                        <tr>
+                            <td><?php echo $extenso['id']; ?></td>
+                            <td><?php echo htmlspecialchars($extenso['titulo']); ?></td>
+                            <td>
+                                <button class="btn btn-sm btn-danger btn-asignar-tercero" data-extenso-id="<?php echo $extenso['id']; ?>" data-bs-toggle="modal" data-bs-target="#tercerRevisorModal">Asignar 3er Revisor</button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- TEAM: Revisores -->
+<h3 class="mt-5">Equipo de Revisores de Extensos en tu Área</h3>
+<div class="row">
+    <?php if (empty($revisoresDisponibles)): ?>
+        <div class="col-12"><p class="text-center text-muted">No hay Revisores de Extensos asignados a esta área.</p></div>
+    <?php else: ?>
+        <?php foreach ($revisoresDisponibles as $revisor): ?>
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <?php if (!empty($revisor['foto_ruta'])): ?>
+                            <img src="<?php echo BASE_URL . 'uploads/revisores_perfil/' . $revisor['foto_ruta']; ?>" alt="Foto Perfil" class="rounded-circle mb-3" style="width: 100px; height: 100px; object-fit: cover;">
+                        <?php else: ?>
+                            <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 100px; height: 100px; color: white; font-size: 2rem;">
+                                <?php echo strtoupper(substr($revisor['nombre_completo'], 0, 1)); ?>
+                            </div>
+                        <?php endif; ?>
+
+                        <h5 class="card-title"><?php echo htmlspecialchars($revisor['nombre_completo']); ?></h5>
+                        <p class="card-text small text-muted"><?php echo htmlspecialchars($revisor['grado_academico']); ?></p>
+                        <p class="card-text small"><?php echo htmlspecialchars($revisor['area_especialidad']); ?></p>
+                        <p class="card-text small text-muted"><?php echo htmlspecialchars($revisor['correo']); ?></p>
+
+                        <div class="mt-2">
+                             <span class="badge bg-info mb-2">Carga: <?php echo $revisor['carga_actual']; ?> / 4</span>
+                             <?php if (!empty($revisor['comprobante_sni_ruta'])): ?>
+                                <br>
+                                <a href="<?php echo BASE_URL . 'uploads/revisores_perfil/' . $revisor['comprobante_sni_ruta']; ?>" target="_blank" class="btn btn-sm btn-outline-secondary">Ver CV/SNI</a>
+                             <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
+</div>
+
+
+<!-- MODALES -->
+<div class="modal fade" id="asignarModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Asignar Revisores de Extensos</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <p>Selecciona **dos** revisores para el artículo.</p>
+        <form id="asignarForm">
+            <input type="hidden" id="extenso_id_asignar">
+            <div id="revisores-container">
+                <?php foreach ($revisoresDisponibles as $rev): ?>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="revisores_ids[]" value="<?php echo $rev['id']; ?>" id="rev-<?php echo $rev['id']; ?>">
+                  <label class="form-check-label" for="rev-<?php echo $rev['id']; ?>">
+                    <?php echo htmlspecialchars($rev['nombre_completo']); ?> (<?php echo $rev['carga_actual']; ?>/4)
+                  </label>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </form>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" form="asignarForm" class="btn btn-primary">Confirmar Asignación</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="devolverModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Devolver Artículo por Formato</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <p>Escribe las observaciones para que el autor corrija el formato.</p>
+        <form id="devolverForm">
+            <input type="hidden" id="extenso_id_devolver">
+            <textarea class="form-control" id="comentarios_formato" rows="4" required></textarea>
+        </form>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" form="devolverForm" class="btn btn-warning">Enviar Observaciones al Autor</button></div>
+    </div>
+  </div>
+</div>
+
 <div class="modal fade" id="cambiarRevisoresModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -137,41 +247,7 @@
     </div>
   </div>
 </div>
-<h3 class="mt-5">Equipo de Revisores de Extensos en tu Área</h3>
-<div class="card">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Nombre</th>
-                        <th>Grado Académico</th>
-                        <th>Correo</th>
-                        <th>Área de Especialidad</th>
-                        <th>Carga Actual</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($revisoresDisponibles)): ?>
-                        <tr><td colspan="5" class="text-center">No hay Revisores de Extensos asignados a esta área.</td></tr>
-                    <?php else: ?>
-                        <?php foreach ($revisoresDisponibles as $revisor): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($revisor['nombre_completo']); ?></td>
-                                <td><?php echo htmlspecialchars($revisor['grado_academico']); ?></td>
-                                <td><?php echo htmlspecialchars($revisor['correo']); ?></td>
-                                <td><small><?php echo htmlspecialchars($revisor['area_especialidad']); ?></small></td>
-                                <td>
-                                    <span class="badge bg-info"><?php echo $revisor['carga_actual']; ?> / 4</span>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
+
 <div class="modal fade" id="tercerRevisorModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -196,21 +272,12 @@
     </div>
   </div>
 </div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // --- VARIABLES GLOBALES ---
     const baseUrl = '<?php echo BASE_URL; ?>';
     const csrfToken = '<?php echo $_SESSION["csrf_token"] ?? ""; ?>';
-    const mensajeDiv = document.getElementById('mensaje-gestion');
-
-    // --- MODALES ---
-    const asignarModal = new bootstrap.Modal(document.getElementById('asignarModal'));
-    const devolverModal = new bootstrap.Modal(document.getElementById('devolverModal'));
-    const cambiarRevisoresModal = new bootstrap.Modal(document.getElementById('cambiarRevisoresModal'));
-    // Asegúrate de que este ID exista en tu HTML
-    const tercerRevisorModalEl = document.getElementById('tercerRevisorModal');
-    const tercerRevisorModal = tercerRevisorModalEl ? new bootstrap.Modal(tercerRevisorModalEl) : null;
-    const cambiarRevisoresForm = document.getElementById('cambiarRevisoresForm');
 
     // --- LISTENER UNIFICADO DE CLICS (Abrir modales) ---
     document.body.addEventListener('click', function(event) {
@@ -225,7 +292,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (target.classList.contains('btn-cambiar-revisores')) {
             document.getElementById('extenso_id_cambiar').value = extensoId;
-            cambiarRevisoresForm.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            const form = document.getElementById('cambiarRevisoresForm');
+            form.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
             fetch(`${baseUrl}revisor/obtenerRevisoresAsignados/${extensoId}`)
                 .then(res => res.json())
                 .then(revisoresIds => {
@@ -238,9 +306,22 @@ document.addEventListener('DOMContentLoaded', function() {
         if (target.classList.contains('btn-asignar-tercero')) {
             document.getElementById('extenso_id_tercero').value = extensoId;
         }
+        // NUEVO: Aprobar Formato
+        if (target.classList.contains('btn-aprobar-formato')) {
+            if (confirm('¿Estás seguro de que el formato es correcto? El artículo pasará a la lista de asignación.')) {
+                const datos = { extenso_id: extensoId, csrf_token: csrfToken };
+                fetch(`${baseUrl}revisor/aprobarFormatoExtenso`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos)
+                })
+                .then(res => res.json()).then(data => {
+                    alert(data.mensaje || data.error);
+                    if (!data.error) location.reload();
+                });
+            }
+        }
     });
 
-    // --- LISTENER UNIFICADO DE ENVÍOS (Procesar TODOS los formularios aquí) ---
+    // --- LISTENER UNIFICADO DE ENVÍOS ---
     document.body.addEventListener('submit', function(event) {
         const form = event.target;
 
@@ -250,11 +331,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const extensoId = document.getElementById('extenso_id_devolver').value;
             const comentarios = document.getElementById('comentarios_formato').value;
             
-            if (!extensoId || !comentarios) {
-                alert('Por favor completa todos los campos.');
-                return;
-            }
-
             const datos = { extenso_id: extensoId, comentarios: comentarios, csrf_token: csrfToken };
             fetch(`${baseUrl}revisor/devolverExtensoPorFormato`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos)
