@@ -277,6 +277,57 @@ if (isset($revisor['area_id'])) {
 </div>
 --- FIN SECCIÓN COMENTADA --- */ ?>
 
+<h3 class="mt-5">Estado de Evaluaciones Asignadas (Supervisión)</h3>
+<div class="card mb-5">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead><tr><th>Artículo</th><th>Revisor Asignado</th><th>Estatus Evaluación</th><th>Acciones</th></tr></thead>
+                <tbody>
+                    <?php if (empty($asignacionesExtensos)): ?>
+                        <tr><td colspan="4" class="text-center">No hay asignaciones registradas en tu área.</td></tr>
+                    <?php else: ?>
+                        <?php foreach ($asignacionesExtensos as $asig): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($asig['titulo_articulo']); ?></td>
+                                <td><?php echo htmlspecialchars($asig['nombre_revisor']); ?></td>
+                                <td>
+                                    <?php
+                                        $estatus = $asig['estatus_evaluacion'] ?? 'Pendiente';
+                                        $badgeClass = 'bg-secondary';
+                                        if ($estatus === 'Validada') $badgeClass = 'bg-success';
+                                        if ($estatus === 'Pendiente de Firma') $badgeClass = 'bg-warning text-dark';
+                                    ?>
+                                    <span class="badge <?php echo $badgeClass; ?>"><?php echo htmlspecialchars($estatus); ?></span>
+                                </td>
+                                <td>
+                                    <a href="<?php echo BASE_URL; ?>archivo/ver/extensos/<?php echo $asig['archivo_articulo']; ?>" target="_blank" class="btn btn-sm btn-outline-secondary">Ver Artículo</a>
+                                    <?php if (!empty($asig['veredicto'])): ?>
+                                        <button class="btn btn-sm btn-info btn-ver-dictamen" data-eval-id="<?php echo $asig['evaluacion_id']; ?>">Ver Dictamen</button>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para ver dictamen completo -->
+<div class="modal fade" id="verDictamenModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Detalle del Dictamen</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body" id="dictamen-body">
+          <div class="text-center"><div class="spinner-border"></div></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div>
+    </div>
+  </div>
+</div>
+
 <!-- 
 <script>
     <?php /* --- INICIA CÓDIGO COMENTADO ---
@@ -321,6 +372,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const rechazoCoordModal = new bootstrap.Modal(document.getElementById('rechazoCoordModal'));
     const tercerRevisorModal = new bootstrap.Modal(document.getElementById('tercerRevisorModal'));
     const tercerRevisorForm = document.getElementById('tercerRevisorForm');
+    const verDictamenModal = new bootstrap.Modal(document.getElementById('verDictamenModal'));
+
     document.body.addEventListener('click', function(event) {
         const target = event.target;
         const extensoId = target.getAttribute('data-extenso-id');
@@ -338,9 +391,53 @@ document.addEventListener('DOMContentLoaded', function() {
         if (target.classList.contains('btn-rechazar-eval')) {
             document.getElementById('eval_id_rechazo').value = evalId;
         }
-        if (event.target.classList.contains('btn-asignar-tercero')) {
-            const extensoId = event.target.getAttribute('data-extenso-id');
+        if (target.classList.contains('btn-asignar-tercero')) {
+            const extensoId = target.getAttribute('data-extenso-id');
             document.getElementById('extenso_id_tercero').value = extensoId;
+        }
+
+        // NUEVO: Ver Dictamen
+        if (target.classList.contains('btn-ver-dictamen')) {
+            const evaluacionId = target.getAttribute('data-eval-id');
+            const modalBody = document.getElementById('dictamen-body');
+            modalBody.innerHTML = '<div class="text-center"><div class="spinner-border"></div></div>';
+            verDictamenModal.show();
+
+            fetch(`${baseUrl}revisor/obtenerDetallesEvaluacion/${evaluacionId}`)
+                .then(res => res.json())
+                .then(data => {
+                    let respuestasHTML = '';
+                    if (data.respuestas_formulario) {
+                        // Si ya viene como objeto (decodificado en backend)
+                        const respuestas = (typeof data.respuestas_formulario === 'string')
+                                            ? JSON.parse(data.respuestas_formulario)
+                                            : data.respuestas_formulario;
+
+                        for (const [key, value] of Object.entries(respuestas)) {
+                            respuestasHTML += `<p><strong>${key}:</strong> ${value}</p>`;
+                        }
+                    }
+                    let pdfLink = '';
+                    if (data.pdf_firmado_ruta) {
+                        pdfLink = `<p class="mt-3"><a href="${baseUrl}archivo/ver/evaluaciones_firmadas/${data.pdf_firmado_ruta}" target="_blank" class="btn btn-primary"><i class="bi bi-file-earmark-pdf"></i> Ver PDF Firmado</a></p>`;
+                    }
+
+                    modalBody.innerHTML = `
+                        <h4>Dictamen: ${data.veredicto}</h4>
+                        <p class="text-muted">Estado: ${data.estatus_evaluacion}</p>
+                        <hr>
+                        <h5>Observaciones Generales</h5>
+                        <p>${data.observaciones_generales || '<em>Sin observaciones.</em>'}</p>
+                        ${data.argumento_rechazo ? `<h5>Argumento de Rechazo</h5><p class="text-danger">${data.argumento_rechazo}</p>` : ''}
+                        <hr>
+                        <h5>Respuestas del Formulario</h5>
+                        ${respuestasHTML || '<p><em>No hay respuestas registradas.</em></p>'}
+                        ${pdfLink}
+                    `;
+                })
+                .catch(err => {
+                    modalBody.innerHTML = `<p class="text-danger">Error al cargar detalles: ${err}</p>`;
+                });
         }
     });
     tercerRevisorForm.addEventListener('submit', function(event) {

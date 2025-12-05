@@ -85,7 +85,11 @@ public function procesarReenvio($extenso_id) {
     try {
         $pdo->beginTransaction();
 
-        EvaluacionExtenso::eliminarEvaluacionesAnteriores($extenso_id);
+        // Obtener ID de la versión anterior para replicar asignación
+        $idVersionAnterior = Extenso::obtenerIdUltimaVersion($extenso_id);
+
+        // NO eliminamos evaluaciones anteriores para mantener el historial
+        // EvaluacionExtenso::eliminarEvaluacionesAnteriores($extenso_id);
 
         $directorioSubida = BACKEND_ROOT . '/uploads/extensos/';
         $archivo = $_FILES['archivo_extenso'];
@@ -100,6 +104,13 @@ public function procesarReenvio($extenso_id) {
 
         Extenso::agregarVersion($extenso_id, $nuevoIntento, $nombreUnico);
         Extenso::actualizarEstatus($extenso_id, 'Pendiente de Filtro');
+
+        // Replicar asignación de revisores para la nueva versión
+        $idVersionNueva = Extenso::obtenerIdUltimaVersion($extenso_id);
+        if ($idVersionAnterior) {
+            EvaluacionExtenso::replicarAsignacion($idVersionAnterior, $idVersionNueva);
+        }
+
         $pdo->commit();
         echo json_encode(['mensaje' => 'Nueva versión enviada con éxito.']);
 
