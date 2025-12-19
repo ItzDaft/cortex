@@ -69,6 +69,7 @@
                         
                         if (in_array('Administrador', $_SESSION['usuario_roles']) || in_array('Coordinador', $_SESSION['usuario_roles']) || in_array('Revisor de Pagos', $_SESSION['usuario_roles'])) {
                             echo '<li><a class="dropdown-item" href="'.BASE_URL.'revisorPagos/dashboard"><i class="bi bi-credit-card me-2"></i>Revisar Pagos</a></li>';
+                            echo'<li><a class="dropdown-item" href="<?php echo BASE_URL; ?>administrador/reportes"><i class="bi bi-graph-up me-2"></i>Reportes</a></li>';
                         }
                         ?>
                         <?php if (in_array('Revisor de Pagos', $_SESSION['usuario_roles'])): ?>

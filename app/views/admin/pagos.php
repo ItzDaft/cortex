@@ -5,41 +5,41 @@
 <div class="row mb-4">
     <div class="col-xl-3 col-md-6 mb-4">
         <div class="card text-white bg-primary h-100">
-            <div class="card-body">
+                <div class="card-body">
                 <h5 class="card-title">Total Recaudado</h5>
-                <p class="card-text fs-4">$<?php echo number_format($estadisticas['total_recaudado'] ?? 0, 2); ?> MXN</p>
+                <p id="stat-total-recaudado" class="card-text fs-4">$<?php echo number_format($estadisticas['total_recaudado'] ?? 0, 2); ?> MXN</p>
             </div>
         </div>
     </div>
     <div class="col-xl col-md-6 mb-4">
         <div class="card bg-warning text-dark h-100">
-            <div class="card-body">
+                <div class="card-body">
                 <h5 class="card-title">Pagos en Revisión</h5>
-                <p class="card-text fs-4"><?php echo $estadisticas['en_revision'] ?? 0; ?></p>
+                <p id="stat-en-revision" class="card-text fs-4"><?php echo $estadisticas['en_revision'] ?? 0; ?></p>
             </div>
         </div>
     </div>
     <div class="col-xl col-md-6 mb-4">
         <div class="card bg-info text-white h-100">
-            <div class="card-body">
+                <div class="card-body">
                 <h5 class="card-title">Pendientes (sin comprobante)</h5>
-                <p class="card-text fs-4"><?php echo $estadisticas['pendientes_sin_comprobante'] ?? 0; ?></p>
+                <p id="stat-pendientes-sin-comprobante" class="card-text fs-4"><?php echo $estadisticas['pendientes_sin_comprobante'] ?? 0; ?></p>
             </div>
         </div>
     </div>
     <div class="col-xl col-md-6 mb-4">
         <div class="card bg-success text-white h-100">
-            <div class="card-body">
+                <div class="card-body">
                 <h5 class="card-title">Aprobados</h5>
-                <p class="card-text fs-4"><?php echo $estadisticas['aprobados'] ?? 0; ?></p>
+                <p id="stat-aprobados" class="card-text fs-4"><?php echo $estadisticas['aprobados'] ?? 0; ?></p>
             </div>
         </div>
     </div>
     <div class="col-xl col-md-6 mb-4">
         <div class="card bg-danger text-white h-100">
-            <div class="card-body">
+                <div class="card-body">
                 <h5 class="card-title">Rechazados</h5>
-                <p class="card-text fs-4"><?php echo $estadisticas['rechazados'] ?? 0; ?></p>
+                <p id="stat-rechazados" class="card-text fs-4"><?php echo $estadisticas['rechazados'] ?? 0; ?></p>
             </div>
         </div>
     </div>
@@ -79,12 +79,10 @@ foreach (($pagosPorEstatus['Pendiente'] ?? []) as $pago) {
 ?>
 
 <?php
-// Helper: determina el tipo de participante a mostrar en la tabla
 function tipoParticipanteFromPago($pago) {
     $roles = $pago['roles'] ?? '';
     $monto = $pago['monto'] ?? null;
 
-    // Priorizar roles explícitos
     if (is_string($roles)) {
         if (strpos($roles, 'Autor') !== false) return htmlspecialchars('Autor');
         if (strpos($roles, 'Asistente con Cartel') !== false) return htmlspecialchars('Asistente con Cartel');
@@ -92,13 +90,11 @@ function tipoParticipanteFromPago($pago) {
         if (strpos($roles, 'Revisor de Pagos') !== false) return htmlspecialchars('Revisor de Pagos');
     }
 
-    // Si es asistente, usar monto para distinguir estudiante/profesionista
     if (is_numeric($monto)) {
         if ($monto == 300) return htmlspecialchars('Asistente Estudiante');
         if ($monto == 1000) return htmlspecialchars('Asistente Profesionista');
     }
 
-    // Fallback: si hay rol(s) devolver la cadena; sino devolver '-' 
     if (!empty($roles)) return htmlspecialchars($roles);
     return '-';
 }
@@ -111,17 +107,26 @@ function tipoParticipanteFromPago($pago) {
             <table class="table table-hover align-middle">
                 <thead>
                     <tr>
-                            <th>#</th><th>ID Pago</th><th>ID Usuario</th><th>Usuario</th><th>Institución</th><th>Monto</th><th>Tipo de Participante</th><th>Comprobante</th>
+                            <th>#</th><th>ID Pago</th><th>Resumen ID</th><th>ID Usuario</th><th>Usuario</th><th>Institución</th><th>Monto</th><th>Tipo de Participante</th><th>Comprobante</th>
                         </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($pendientesRevision)): ?>
-                        <tr><td colspan="8" class="text-center">No hay pagos pendientes en revisión.</td></tr>
+                        <tr><td colspan="9" class="text-center">No hay pagos pendientes en revisión.</td></tr>
                     <?php else: ?>
                         <?php $i=1; foreach ($pendientesRevision as $pago): ?>
                             <tr>
                                 <td><?php echo $i++; ?></td>
                                 <td><?php echo $pago['id']; ?></td>
+                                <td>
+                                    <?php if (!empty($pago['resumen_id'])): ?>
+                                        <a href="#" class="btn-ver-detalles" data-id="<?php echo $pago['resumen_id']; ?>">
+                                            <?php echo $pago['resumen_id']; ?>
+                                        </a>
+                                    <?php else: ?>
+                                        &ndash;
+                                    <?php endif; ?>
+                                </td>
                                 <td><?php echo $pago['usuario_id'] ?? ''; ?></td>
                                 <td><?php echo htmlspecialchars($pago['nombre_completo']); ?></td>
                                 <td><?php echo htmlspecialchars($pago['institucion_procedencia'] ?? ''); ?></td>
@@ -131,6 +136,7 @@ function tipoParticipanteFromPago($pago) {
                                     <a href="<?php echo BASE_URL; ?>archivo/ver/pagos/<?php echo $pago['comprobante_ruta']; ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
                                         Ver Archivo
                                     </a>
+                                    <button type="button" class="btn btn-sm btn-warning ms-2 btn-condonar" data-id="<?php echo $pago['id']; ?>">Condonar</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -148,23 +154,35 @@ function tipoParticipanteFromPago($pago) {
             <table class="table table-hover align-middle">
                 <thead>
                         <tr>
-                        <th>#</th><th>ID Pago</th><th>ID Usuario</th><th>Usuario</th><th>Institución</th><th>Monto</th><th>Tipo de Participante</th><th>Comprobante</th>
+                        <th>#</th><th>ID Pago</th><th>Resumen ID</th><th>ID Usuario</th><th>Usuario</th><th>Institución</th><th>Monto</th><th>Tipo de Participante</th><th>Comprobante</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($pendientesSinComprobante)): ?>
-                        <tr><td colspan="8" class="text-center">No hay pagos pendientes sin comprobante.</td></tr>
+                        <tr><td colspan="9" class="text-center">No hay pagos pendientes sin comprobante.</td></tr>
                     <?php else: ?>
                         <?php $i=1; foreach ($pendientesSinComprobante as $pago): ?>
                             <tr>
                                 <td><?php echo $i++; ?></td>
                                 <td><?php echo $pago['id']; ?></td>
+                                <td>
+                                    <?php if (!empty($pago['resumen_id'])): ?>
+                                        <a href="#" class="btn-ver-detalles" data-id="<?php echo $pago['resumen_id']; ?>">
+                                            <?php echo $pago['resumen_id']; ?>
+                                        </a>
+                                    <?php else: ?>
+                                        &ndash;
+                                    <?php endif; ?>
+                                </td>
                                 <td><?php echo $pago['usuario_id'] ?? ''; ?></td>
                                 <td><?php echo htmlspecialchars($pago['nombre_completo']); ?></td>
                                 <td><?php echo htmlspecialchars($pago['institucion_procedencia'] ?? ''); ?></td>
                                 <td>$<?php echo number_format($pago['monto'], 2); ?></td>
                                 <td><?php echo tipoParticipanteFromPago($pago); ?></td>
-                                <td><small class="text-muted">N/A</small></td>
+                                <td>
+                                    <small class="text-muted">N/A</small>
+                                    <button type="button" class="btn btn-sm btn-warning ms-2 btn-condonar" data-id="<?php echo $pago['id']; ?>">Condonar</button>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -190,17 +208,26 @@ foreach ($ordenDeEstatus as $estatus => $titulo):
             <table class="table table-hover align-middle">
                 <thead>
                     <tr>
-                        <th>#</th><th>ID Pago</th><th>ID Usuario</th><th>Usuario</th><th>Institución</th><th>Monto</th><th>Tipo de Participante</th><th>Comprobante</th>
+                        <th>#</th><th>ID Pago</th><th>Resumen ID</th><th>ID Usuario</th><th>Usuario</th><th>Institución</th><th>Monto</th><th>Tipo de Participante</th><th>Comprobante</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($listaPagos)): ?>
-                        <tr><td colspan="8" class="text-center">No hay pagos en este estado.</td></tr>
+                        <tr><td colspan="9" class="text-center">No hay pagos en este estado.</td></tr>
                     <?php else: ?>
                         <?php $i=1; foreach ($listaPagos as $pago): ?>
                             <tr>
                                 <td><?php echo $i++; ?></td>
                                 <td><?php echo $pago['id']; ?></td>
+                                <td>
+                                    <?php if (!empty($pago['resumen_id'])): ?>
+                                        <a href="#" class="btn-ver-detalles" data-id="<?php echo $pago['resumen_id']; ?>">
+                                            <?php echo $pago['resumen_id']; ?>
+                                        </a>
+                                    <?php else: ?>
+                                        &ndash;
+                                    <?php endif; ?>
+                                </td>
                                 <td><?php echo $pago['usuario_id'] ?? ''; ?></td>
                                 <td><?php echo htmlspecialchars($pago['nombre_completo']); ?></td>
                                 <td><?php echo htmlspecialchars($pago['institucion_procedencia'] ?? ''); ?></td>
@@ -271,6 +298,23 @@ foreach ($ordenDeEstatus as $estatus => $titulo):
     </div>
   </div>
 </div>
+ 
+    <div class="modal fade" id="detalleResumenModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Detalle del Resumen</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="detalleResumenBody">
+                    <div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const buscador = document.getElementById('buscador-pagos');
@@ -285,21 +329,21 @@ document.addEventListener('DOMContentLoaded', function() {
                         return;
                     }
 
-                    // Column indexes after changes:
-                    // 0: #, 1: ID Pago, 2: ID Usuario, 3: Usuario, 4: Institución, 5: Monto, 6: Tipo de Participante, 7: Comprobante
                     const idCell = row.children[1];
-                    const usuarioIdCell = row.children[2];
-                    const nombreCell = row.children[3];
-                    const institucionCell = row.children[4];
-                    const tipoCell = row.children[6];
+                    const resumenIdCell = row.children[2];
+                    const usuarioIdCell = row.children[3];
+                    const nombreCell = row.children[4];
+                    const institucionCell = row.children[5];
+                    const tipoCell = row.children[7];
 
                     const idText = idCell ? idCell.textContent.trim().toLowerCase() : '';
+                    const resumenIdText = resumenIdCell ? resumenIdCell.textContent.trim().toLowerCase() : '';
                     const usuarioIdText = usuarioIdCell ? usuarioIdCell.textContent.trim().toLowerCase() : '';
                     const nombreText = nombreCell ? nombreCell.textContent.trim().toLowerCase() : '';
                     const institucionText = institucionCell ? institucionCell.textContent.trim().toLowerCase() : '';
                     const tipoText = tipoCell ? tipoCell.textContent.trim().toLowerCase() : '';
 
-                    if (mostrarTodo || idText.includes(filtro) || usuarioIdText.includes(filtro) || nombreText.includes(filtro) || institucionText.includes(filtro) || tipoText.includes(filtro)) {
+                    if (mostrarTodo || idText.includes(filtro) || resumenIdText.includes(filtro) || usuarioIdText.includes(filtro) || nombreText.includes(filtro) || institucionText.includes(filtro) || tipoText.includes(filtro)) {
                         row.style.display = '';
                     } else {
                         row.style.display = 'none';
@@ -347,5 +391,105 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+
+            const detalleModalEl = document.getElementById('detalleResumenModal');
+            const detalleModal = detalleModalEl ? new bootstrap.Modal(detalleModalEl) : null;
+            const detalleBody = document.getElementById('detalleResumenBody');
+            const baseUrl = '<?php echo BASE_URL; ?>';
+
+            document.body.addEventListener('click', function(event) {
+                const btn = event.target.closest('.btn-ver-detalles');
+                if (!btn) return;
+                event.preventDefault();
+                const resumenId = btn.getAttribute('data-id');
+                if (!resumenId) return;
+
+                if (detalleBody) {
+                    detalleBody.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+                }
+                if (detalleModal) detalleModal.show();
+
+                fetch(`${baseUrl}administrador/obtenerResumenDetalles/${resumenId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        const tipoResumen = data.autor_roles && data.autor_roles.includes('Autor') ? 'Extenso' : 'Póster';
+                        let keywordsHTML = data.palabras_clave ? data.palabras_clave.split(',').map(k => `<span class="badge bg-secondary me-1">${k.trim()}</span>`).join(' ') : 'No especificado';
+                        if (detalleBody) {
+                            detalleBody.innerHTML = `
+                                <h4>${data.titulo}</h4>
+                                <p><strong>Tipo:</strong> ${tipoResumen}</p>
+                                <hr>
+                                <p><strong>Autor Principal:</strong> ${data.autor_principal}</p>
+                                <p><strong>Co-autores:</strong> ${data.coautores || 'N/A'}</p>
+                                <p><strong>Adscripción 1:</strong> ${data.adscripcion1 || 'N/A'}</p>
+                                <p><strong>Adscripción 2:</strong> ${data.adscripcion2 || 'N/A'}</p>
+                                <hr>
+                                <p style="white-space: pre-wrap;">${data.resumen_texto || ''}</p>
+                                <hr>
+                                <p><strong>Palabras clave:</strong> ${keywordsHTML}</p>
+                            `;
+                        }
+                    })
+                    .catch(err => {
+                        if (detalleBody) detalleBody.innerHTML = '<p class="text-danger">Error al cargar el detalle del resumen.</p>';
+                    });
+            });
+
+                // Manejador para condonar un pago desde la tabla
+                document.body.addEventListener('click', function(event) {
+                    const btn = event.target.closest('.btn-condonar');
+                    if (!btn) return;
+                    event.preventDefault();
+                    if (!confirm('¿Confirma que desea condonar este pago? Esta acción pondrá el monto a $0.00 y lo marcará como Aprobado.')) return;
+
+                    const pagoId = btn.getAttribute('data-id');
+                    if (!pagoId) return;
+
+                    const csrfInput = document.querySelector('input[name="csrf_token"]');
+                    const csrf = csrfInput ? csrfInput.value : '';
+
+                    const fd = new FormData();
+                    fd.append('pago_id', pagoId);
+                    fd.append('csrf_token', csrf);
+
+                    fetch(baseUrl + 'administrador/condonarPago', {
+                        method: 'POST',
+                        body: fd
+                    })
+                    .then(res => res.json())
+                    .then(json => {
+                        if (json.error) throw new Error(json.error);
+                        // Actualizar la fila visualmente
+                        const row = btn.closest('tr');
+                        if (row) {
+                            const montoCell = row.children[6];
+                            const comprobanteCell = row.children[8];
+                            if (montoCell) montoCell.textContent = '$0.00';
+                            if (comprobanteCell) comprobanteCell.innerHTML = '<small class="text-muted">Condonado</small>';
+                            btn.remove();
+                        }
+
+                        // Si el servidor devuelve estadísticas actualizadas, refrescarlas en la UI
+                        if (json.estadisticas) {
+                            const est = json.estadisticas;
+                            const totalRecaudadoEl = document.getElementById('stat-total-recaudado');
+                            const enRevisionEl = document.getElementById('stat-en-revision');
+                            const pendientesSinCompEl = document.getElementById('stat-pendientes-sin-comprobante');
+                            const aprobadosEl = document.getElementById('stat-aprobados');
+                            const rechazadosEl = document.getElementById('stat-rechazados');
+
+                            if (totalRecaudadoEl) totalRecaudadoEl.textContent = '$' + (Number(est['total_recaudado'] ?? 0)).toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' MXN';
+                            if (enRevisionEl) enRevisionEl.textContent = est['en_revision'] ?? 0;
+                            if (pendientesSinCompEl) pendientesSinCompEl.textContent = est['pendientes_sin_comprobante'] ?? 0;
+                            if (aprobadosEl) aprobadosEl.textContent = est['aprobados'] ?? 0;
+                            if (rechazadosEl) rechazadosEl.textContent = est['rechazados'] ?? 0;
+                        }
+
+                        alert(json.mensaje || 'Pago condonado correctamente.');
+                    })
+                    .catch(err => {
+                        alert('Error al condonar el pago: ' + (err.message || 'No se pudo completar la operación.'));
+                    });
+                });
 });
 </script>

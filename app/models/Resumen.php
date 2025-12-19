@@ -262,4 +262,41 @@ public static function buscarParaEnvioExtenso(int $autor_id): array {
     $stmt->execute(['autor_id' => $autor_id]);
     return $stmt->fetchAll();
 }
+public static function obtenerDatosPorMemorias(): array {
+    $pdo = Database::conectar();
+
+    $sql = "SELECT 
+        res.id,
+        MAX(res.autor_principal) AS autor_principal,
+        MAX(res.coautores) AS coautores,
+        MAX(res.adscripcion1) AS adscripcion1,
+        MAX(res.adscripcion2) AS adscripcion2,
+        MAX(res.titulo) AS titulo,
+        MAX(res.resumen_texto) AS resumen_texto,
+        MAX(res.palabras_clave) AS palabras_clave,
+        MAX(u.correo) AS autor_correo, 
+        CASE
+            WHEN GROUP_CONCAT(r.nombre_rol) LIKE '%Autor%' THEN 'Extenso'
+            WHEN GROUP_CONCAT(r.nombre_rol) LIKE '%Asistente con Cartel%' THEN 'Póster'
+            ELSE 'Otro'
+        END AS tipo_de_usuario,
+        MAX(a.nombre_area) AS nombre_area
+    FROM
+        resumenes res
+    JOIN
+        usuarios u ON res.autor_id = u.id
+    JOIN
+        usuario_roles ur ON u.id = ur.usuario_id
+    JOIN
+        roles r ON ur.rol_id = r.id
+    JOIN
+        areas_tematicas a ON res.area_id = a.id
+    WHERE
+        r.nombre_rol IN ('Autor', 'Asistente con Cartel')
+    GROUP BY
+        res.id";
+
+    $stmt = $pdo->query($sql);
+    return $stmt->fetchAll(); 
+}
 }

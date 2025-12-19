@@ -84,8 +84,14 @@ public function dashboard() {
     if (!Usuario::perfilRevisorEstaCompleto($_SESSION['usuario_id'])) {
         redirect('revisorExtensos/completarPerfil');
     }
-    $evaluacionesAsignadas = EvaluacionExtenso::buscarAsignadasPorRevisor($_SESSION['usuario_id']);
-    $evaluacionesCompletadas = EvaluacionExtenso::buscarCompletadasPorRevisor($_SESSION['usuario_id']);
+    // List 1: Por Evaluar (Drafts or Pending)
+    $evaluacionesPorEvaluar = EvaluacionExtenso::buscarAsignadasPorRevisor($_SESSION['usuario_id']);
+
+    // List 2: Por Firmar (Accepted Pending PDF)
+    $evaluacionesPorFirmar = EvaluacionExtenso::buscarPorFirmarPorRevisor($_SESSION['usuario_id']);
+
+    // List 3: Historial (Completed/Validated)
+    $evaluacionesHistorial = EvaluacionExtenso::buscarCompletadasPorRevisor($_SESSION['usuario_id']);
 
     require_once BACKEND_ROOT . '/app/views/layout/header.php';
     require_once BACKEND_ROOT . '/app/views/revisor_extensos/dashboard.php';
@@ -116,26 +122,60 @@ public function procesarEvaluacion($evaluacion_id) {
     }
 
     $datos_post = $_POST;
-    $respuestas = [];
+    
     for ($i = 1; $i <= 6; $i++) {
-        $respuestas['pregunta_'.$i] = $datos_post['pregunta_'.$i] ?? 'no';
+        if (empty($datos_post['pregunta_'.$i])) {
+            http_response_code(400); echo json_encode(['error' => 'Por favor, responde todas las preguntas.']); return;
+        }
     }
+    if (empty($datos_post['veredicto'])) {
+        http_response_code(400); echo json_encode(['error' => 'Selecciona una valoración global.']); return;
+    }
+
+    $veredicto = $datos_post['veredicto'];
+    $respuestas = [];
+    for ($i = 1; $i <= 6; $i++) { $respuestas['pregunta_'.$i] = $datos_post['pregunta_'.$i]; }
+    
     $datos_guardar = [
         'respuestas_formulario'   => json_encode($respuestas),
         'observaciones_generales' => $datos_post['observaciones_generales'],
-        'veredicto'               => $datos_post['veredicto'],
-        'argumento_rechazo'       => ($datos_post['veredicto'] === 'No Publicable') ? $datos_post['argumento_rechazo'] : null
+        'veredicto'               => $veredicto,
+        'argumento_rechazo'       => ($veredicto === 'No Publicable') ? $datos_post['argumento_rechazo'] : null
     ];
 
-    if (EvaluacionExtenso::guardarEvaluacion($evaluacion_id, $datos_guardar)) {
-        $pdf_url = BASE_URL . 'reporte/generarEvaluacionPDF/' . $evaluacion_id;
-        echo json_encode([
-            'mensaje' => 'Evaluación guardada. Ahora descarga el PDF para firmarlo.',
-            'pdf_url' => $pdf_url
-        ]);
+    if ($veredicto === 'Favorable y Publicable') {
+        // Requires Signature -> Pendiente de Firma
+        if (EvaluacionExtenso::validarEvaluacion($evaluacion_id, 'Pendiente de Firma', null)) {
+            // Also need to save content
+             EvaluacionExtenso::guardarEvaluacion($evaluacion_id, $datos_guardar); // Saves data
+             EvaluacionExtenso::validarEvaluacion($evaluacion_id, 'Pendiente de Firma', null); // Ensure status
+
+            $pdf_url = BASE_URL . 'reporte/generarEvaluacionPDF/' . $evaluacion_id;
+            echo json_encode([
+                'mensaje' => 'Evaluación favorable. Descarga el PDF para firmarlo.',
+                'pdf_url' => $pdf_url,
+                'requiere_firma' => true
+            ]);
+        } else {
+            http_response_code(500); echo json_encode(['error' => 'Error al guardar evaluación.']);
+        }
+
     } else {
-        http_response_code(500);
-        echo json_encode(['error' => 'No se pudo guardar la evaluación.']);
+        // No signature needed -> Validada immediately
+        EvaluacionExtenso::guardarEvaluacion($evaluacion_id, $datos_guardar);
+        if (EvaluacionExtenso::validarEvaluacion($evaluacion_id, 'Validada', null)) {
+
+            // Check Consensus Logic
+            $evaluacion = EvaluacionExtenso::buscarPorId($evaluacion_id);
+            EvaluacionExtenso::verificarConsenso($evaluacion['extenso_version_id']);
+
+            echo json_encode([
+                'mensaje' => 'Evaluación enviada y registrada.',
+                'requiere_firma' => false
+            ]);
+        } else {
+            http_response_code(500); echo json_encode(['error' => 'Error al guardar evaluación.']);
+        }
     }
 }
 /**
@@ -165,6 +205,11 @@ public function subirPdfFirmado($evaluacion_id) {
 
     if (move_uploaded_file($archivo['tmp_name'], $rutaDestino)) {
         if (EvaluacionExtenso::guardarPdfFirmado($evaluacion_id, $nombreUnico)) {
+
+            // Check Consensus Logic
+            $evaluacion = EvaluacionExtenso::buscarPorId($evaluacion_id);
+            EvaluacionExtenso::verificarConsenso($evaluacion['extenso_version_id']);
+
             echo json_encode(['mensaje' => 'Evaluación firmada subida con éxito.']);
         } else {
             http_response_code(500); echo json_encode(['error' => 'No se pudo actualizar la base de datos.']);
