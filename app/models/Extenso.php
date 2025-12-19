@@ -35,20 +35,18 @@ class Extenso {
         return $stmt->execute(['estatus' => $nuevo_estatus, 'id' => $extenso_id]);
     }
     /**
- * Obtiene los extensos que han sido enviados y están esperando ser asignados a revisores.
+ * Obtiene los extensos que han sido validados y están esperando ser asignados a revisores.
  */
-public static function obtenerPendientesDeAsignacion(): array {
+public static function obtenerPendientesDeAsignacionPorArea(int $area_id): array {
     $pdo = Database::conectar();
-    // CAMBIO: Se añade r.area_id a la consulta SELECT
-    $sql = "SELECT e.*, r.titulo, r.area_id
+    $sql = "SELECT e.*, r.titulo, r.area_id, ev.archivo_ruta
             FROM extensos e
             JOIN resumenes r ON e.resumen_id = r.id
-            LEFT JOIN extenso_versiones ev ON e.id = ev.extenso_id
-            LEFT JOIN evaluaciones_extensos ee ON ev.id = ee.extenso_version_id
-            WHERE e.estatus_extenso = 'Pendiente de Filtro' AND ee.id IS NULL
-            GROUP BY e.id";
+            JOIN extenso_versiones ev ON e.id = ev.extenso_id 
+                AND ev.intento = (SELECT MAX(v.intento) FROM extenso_versiones v WHERE v.extenso_id = e.id)
+            WHERE e.estatus_extenso = 'Pendiente de Asignacion' AND r.area_id = :area_id";
     $stmt = $pdo->prepare($sql);
-    $stmt->execute();
+    $stmt->execute(['area_id' => $area_id]);
     return $stmt->fetchAll();
 }
 /**
