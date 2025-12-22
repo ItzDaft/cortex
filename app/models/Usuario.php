@@ -271,39 +271,58 @@ public static function buscarRevisorDisponiblePorArea(int $area_id) {
  * @param array $datos Los datos del perfil a guardar.
  * @return bool True si la operación fue exitosa.
  */
-public static function guardarPerfilRevisorExtenso(array $datos,int $area_id): bool {
-    $pdo = Database::conectar();
-    try {
-        $pdo->beginTransaction();
-        $sql_perfil = "INSERT INTO revisores_extensos_perfil 
-                    (usuario_id, grado_academico, afiliacion_institucional, cargo_actual, area_especialidad, orcid, google_scholar_id, comprobante_sni_ruta, foto_ruta, acepta_terminos)
-                VALUES
-                    (:usuario_id, :grado_academico, :afiliacion_institucional, :cargo_actual, :area_especialidad, :orcid, :google_scholar_id, :comprobante_sni_ruta, :foto_ruta, 1)
-                ON DUPLICATE KEY UPDATE
-                    grado_academico = VALUES(grado_academico),
-                    afiliacion_institucional = VALUES(afiliacion_institucional),
-                    cargo_actual = VALUES(cargo_actual),
-                    area_especialidad = VALUES(area_especialidad),
-                    orcid = VALUES(orcid),
-                    google_scholar_id = VALUES(google_scholar_id),
-                    comprobante_sni_ruta = VALUES(comprobante_sni_ruta),
-                    foto_ruta = VALUES(foto_ruta),
-                    acepta_terminos = VALUES(acepta_terminos)";
-        
-        $stmt_perfil = $pdo->prepare($sql_perfil);
-        $stmt_perfil->execute($datos);
-        $sql_usuario = "UPDATE usuarios SET area_id = :area_id WHERE id = :usuario_id";
-        $stmt_usuario = $pdo->prepare($sql_usuario);
-        $stmt_usuario->execute(['area_id' => $area_id, 'usuario_id' => $datos['usuario_id']]);
+    /**
+     * Guarda o actualiza el perfil detallado de un Revisor de Extensos.
+     * MEJORA: Utiliza COALESCE en el UPDATE para no borrar archivos si no se suben nuevos.
+     */
+    public static function guardarPerfilRevisorExtenso(array $datos, int $area_id): bool {
+        $pdo = Database::conectar();
+        try {
+            $pdo->beginTransaction();
+            
+            $sql_perfil = "INSERT INTO revisores_extensos_perfil 
+                                (usuario_id, grado_academico, afiliacion_institucional, cargo_actual, area_especialidad, orcid, google_scholar_id, comprobante_sni_ruta, foto_ruta, acepta_terminos)
+                            VALUES
+                                (:usuario_id, :grado_academico, :afiliacion_institucional, :cargo_actual, :area_especialidad, :orcid, :google_scholar_id, :comprobante_sni_ruta, :foto_ruta, 1)
+                            ON DUPLICATE KEY UPDATE
+                                grado_academico = VALUES(grado_academico),
+                                afiliacion_institucional = VALUES(afiliacion_institucional),
+                                cargo_actual = VALUES(cargo_actual),
+                                area_especialidad = VALUES(area_especialidad),
+                                orcid = VALUES(orcid),
+                                google_scholar_id = VALUES(google_scholar_id),
+¿                                comprobante_sni_ruta = COALESCE(VALUES(comprobante_sni_ruta), comprobante_sni_ruta),
+                                foto_ruta = COALESCE(VALUES(foto_ruta), foto_ruta),
+                                acepta_terminos = VALUES(acepta_terminos)";
+            
+            $stmt_perfil = $pdo->prepare($sql_perfil);
+            $stmt_perfil->execute($datos);
 
-        $pdo->commit();
-        return true;
-    } catch (PDOException $e) {
-        $pdo->rollBack();
-        error_log($e->getMessage());
-        return false;
+            $sql_usuario = "UPDATE usuarios SET area_id = :area_id WHERE id = :usuario_id";
+            $stmt_usuario = $pdo->prepare($sql_usuario);
+            $stmt_usuario->execute(['area_id' => $area_id, 'usuario_id' => $datos['usuario_id']]);
+
+            $pdo->commit();
+            return true;
+        } catch (PDOException $e) {
+            $pdo->rollBack();
+            error_log($e->getMessage());
+            return false;
+        }
     }
-}
+    /**
+     * Obtiene el perfil detallado de un revisor (Útil para llenar el formulario de edición).
+     */
+    public static function obtenerPerfilRevisorExtenso(int $usuario_id) {
+        $pdo = Database::conectar();
+        $sql = "SELECT p.*, u.area_id 
+                FROM revisores_extensos_perfil p
+                JOIN usuarios u ON p.usuario_id = u.id
+                WHERE p.usuario_id = :usuario_id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute(['usuario_id' => $usuario_id]);
+        return $stmt->fetch();
+    }
 
 /**
  * Verifica si un Revisor de Extensos ya ha completado su perfil.
@@ -319,24 +338,36 @@ public static function perfilRevisorEstaCompleto(int $usuario_id): bool {
 /**
  * Busca Revisores de Extensos de un área específica con su perfil y carga de trabajo.
  */
-public static function buscarRevisoresExtensosPorArea(int $area_id): array {
-    $pdo = Database::conectar();
-    $sql = "SELECT 
-                u.id, u.nombre_completo, u.correo,
-                p.grado_academico, p.area_especialidad, p.foto_ruta, p.comprobante_sni_ruta,
-                COUNT(ee.id) as carga_actual
-            FROM usuarios u
-            JOIN usuario_roles ur ON u.id = ur.usuario_id
-            JOIN roles r ON ur.rol_id = r.id
-            LEFT JOIN revisores_extensos_perfil p ON u.id = p.usuario_id
-            LEFT JOIN evaluaciones_extensos ee ON u.id = ee.revisor_id AND ee.estatus_evaluacion IN ('Pendiente de Firma', 'Pendiente de Validación')
-            WHERE r.nombre_rol = 'Revisor de Extensos' AND u.area_id = :area_id AND u.activo = 1
-            GROUP BY u.id
-            ORDER BY u.nombre_completo";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute(['area_id' => $area_id]);
-    return $stmt->fetchAll();
-}
+    public static function buscarRevisoresExtensosPorArea(int $area_id): array {
+        $pdo = Database::conectar();
+        
+        $sql = "SELECT 
+                    u.id, 
+                    u.nombre_completo, 
+                    u.correo,
+                    p.grado_academico, 
+                    p.area_especialidad, 
+                    p.foto_ruta, 
+                    p.comprobante_sni_ruta,
+                    (SELECT COUNT(DISTINCT ev.extenso_id) 
+                     FROM evaluaciones_extensos ee 
+                     JOIN extenso_versiones ev ON ee.extenso_version_id = ev.id
+                     WHERE ee.revisor_id = u.id 
+                     AND ee.estatus_evaluacion NOT IN ('Validada')
+                    ) as carga_actual
+                FROM usuarios u
+                JOIN usuario_roles ur ON u.id = ur.usuario_id
+                JOIN roles r ON ur.rol_id = r.id
+                LEFT JOIN revisores_extensos_perfil p ON u.id = p.usuario_id
+                WHERE r.nombre_rol = 'Revisor de Extensos' 
+                AND u.area_id = :area_id 
+                AND u.activo = 1
+                ORDER BY u.nombre_completo";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute(['area_id' => $area_id]);
+        return $stmt->fetchAll();
+    }
 /**
  * Busca todos los usuarios que pertenecen a una lista de roles.
  * @param array $nombresRoles Array con los nombres de los roles a buscar.

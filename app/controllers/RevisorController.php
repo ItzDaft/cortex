@@ -481,4 +481,23 @@ public function actualizarRevisoresExtenso() {
         http_response_code(500); echo json_encode(['error' => 'No se pudo actualizar la asignación.']);
     }
 }
+
+    /**
+     * API Muestra el directorio y gestión de Revisores de Extenso del área.
+     */
+    public function gestionRevisores() {
+        if (!$this->autorizar()) return;
+
+        $coordinadorArea = Usuario::buscarPorId($_SESSION['usuario_id']);
+        if (empty($coordinadorArea['area_id'])) {
+            echo "Error: No tienes un área asignada."; return;
+        }
+
+        $revisores = Usuario::buscarRevisoresExtensosPorArea($coordinadorArea['area_id']);
+        $areaNombre = AreaTematica::buscarPorId($coordinadorArea['area_id'])['nombre_area'] ?? 'General';
+
+        require_once BACKEND_ROOT . '/app/views/layout/header.php';
+        require_once BACKEND_ROOT . '/app/views/revisor/gestion_revisores.php';
+        require_once BACKEND_ROOT . '/app/views/layout/footer.php';
+    }
 }

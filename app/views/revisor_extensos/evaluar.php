@@ -1,3 +1,16 @@
+<?php
+// 1. PREPARACIÓN DE DATOS (Rescatar lo guardado)
+// Asumimos que $evaluacion viene de tu controlador con los datos de la BD.
+
+// Decodificamos el JSON de las preguntas 1-6. Si está vacío, usamos un array vacío.
+$respuestas = json_decode($evaluacion['respuestas_formulario'] ?? '{}', true);
+
+// Preparamos variables directas para facilitar la lectura en el HTML
+$veredicto_actual = $evaluacion['veredicto'] ?? 'Pendiente';
+$obs_generales    = $evaluacion['observaciones_generales'] ?? '';
+$arg_rechazo      = $evaluacion['argumento_rechazo'] ?? '';
+?>
+
 <h2 class="mb-3">Evaluación de Artículo Extenso</h2>
 <a href="<?php echo BASE_URL; ?>revisorExtensos/dashboard">&laquo; Volver al panel</a>
 
@@ -17,53 +30,140 @@
     <div class="card-body">
         <form id="formEvaluacionExtenso">
             <?php CSRFHelper::getTokenInput(); ?>
+            
+            <!-- ID Oculto necesario para el JS -->
+            <input type="hidden" id="evaluacion_id" name="evaluacion_id" value="<?php echo $evaluacion['id']; ?>">
 
             <h6>Criterios de Evaluación</h6>
             <hr>
+
+            <!-- PREGUNTA 1 -->
             <div class="mb-3"><p>1. ¿Se plantea con claridad el tema abordado en el artículo?</p>
-                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="pregunta_1" value="si" required><label class="form-check-label">Sí</label></div>
-                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="pregunta_1" value="no"><label class="form-check-label">No</label></div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="pregunta_1" value="si" required
+                    <?php echo (isset($respuestas['pregunta_1']) && $respuestas['pregunta_1'] === 'si') ? 'checked' : ''; ?>>
+                    <label class="form-check-label">Sí</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="pregunta_1" value="no"
+                    <?php echo (isset($respuestas['pregunta_1']) && $respuestas['pregunta_1'] === 'no') ? 'checked' : ''; ?>>
+                    <label class="form-check-label">No</label>
+                </div>
             </div>
+
+            <!-- PREGUNTA 2 -->
             <div class="mb-3"><p>2. ¿Se presenta una fundamentación teórica pertinente de acuerdo con el área de conocimiento en la cual se inscribe el tema?</p>
-                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="pregunta_2" value="si" required><label class="form-check-label">Sí</label></div>
-                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="pregunta_2" value="no"><label class="form-check-label">No</label></div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="pregunta_2" value="si" required
+                    <?php echo (isset($respuestas['pregunta_2']) && $respuestas['pregunta_2'] === 'si') ? 'checked' : ''; ?>>
+                    <label class="form-check-label">Sí</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="pregunta_2" value="no"
+                    <?php echo (isset($respuestas['pregunta_2']) && $respuestas['pregunta_2'] === 'no') ? 'checked' : ''; ?>>
+                    <label class="form-check-label">No</label>
+                </div>
             </div>
+
+            <!-- PREGUNTA 3 -->
             <div class="mb-3"><p>3. ¿Se integra contenido pertinente y relevante para el desarrollo del área de conocimiento?</p>
-                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="pregunta_3" value="si" required><label class="form-check-label">Sí</label></div>
-                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="pregunta_3" value="no"><label class="form-check-label">No</label></div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="pregunta_3" value="si" required
+                    <?php echo (isset($respuestas['pregunta_3']) && $respuestas['pregunta_3'] === 'si') ? 'checked' : ''; ?>>
+                    <label class="form-check-label">Sí</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="pregunta_3" value="no"
+                    <?php echo (isset($respuestas['pregunta_3']) && $respuestas['pregunta_3'] === 'no') ? 'checked' : ''; ?>>
+                    <label class="form-check-label">No</label>
+                </div>
             </div>
+
+            <!-- PREGUNTA 4 -->
             <div class="mb-3"><p>4. ¿Los aspectos teóricos que presenta el texto son suficientes para el análisis que presenta?</p>
-                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="pregunta_4" value="si" required><label class="form-check-label">Sí</label></div>
-                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="pregunta_4" value="no"><label class="form-check-label">No</label></div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="pregunta_4" value="si" required
+                    <?php echo (isset($respuestas['pregunta_4']) && $respuestas['pregunta_4'] === 'si') ? 'checked' : ''; ?>>
+                    <label class="form-check-label">Sí</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="pregunta_4" value="no"
+                    <?php echo (isset($respuestas['pregunta_4']) && $respuestas['pregunta_4'] === 'no') ? 'checked' : ''; ?>>
+                    <label class="form-check-label">No</label>
+                </div>
             </div>
+
+            <!-- PREGUNTA 5 -->
             <div class="mb-3"><p>5. ¿Los hallazgos de la investigación contribuyen a la reflexión y/o explicación del tema tratado?</p>
-                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="pregunta_5" value="si" required><label class="form-check-label">Sí</label></div>
-                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="pregunta_5" value="no"><label class="form-check-label">No</label></div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="pregunta_5" value="si" required
+                    <?php echo (isset($respuestas['pregunta_5']) && $respuestas['pregunta_5'] === 'si') ? 'checked' : ''; ?>>
+                    <label class="form-check-label">Sí</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="pregunta_5" value="no"
+                    <?php echo (isset($respuestas['pregunta_5']) && $respuestas['pregunta_5'] === 'no') ? 'checked' : ''; ?>>
+                    <label class="form-check-label">No</label>
+                </div>
             </div>
+
+            <!-- PREGUNTA 6 -->
             <div class="mb-3"><p>6. ¿Se presentan las referencias bibliográficas apropiadas y se citan correctamente?</p>
-                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="pregunta_6" value="si" required><label class="form-check-label">Sí</label></div>
-                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="pregunta_6" value="no"><label class="form-check-label">No</label></div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="pregunta_6" value="si" required
+                    <?php echo (isset($respuestas['pregunta_6']) && $respuestas['pregunta_6'] === 'si') ? 'checked' : ''; ?>>
+                    <label class="form-check-label">Sí</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="pregunta_6" value="no"
+                    <?php echo (isset($respuestas['pregunta_6']) && $respuestas['pregunta_6'] === 'no') ? 'checked' : ''; ?>>
+                    <label class="form-check-label">No</label>
+                </div>
             </div>
+
             <h6 class="mt-4">Observaciones y Veredicto</h6>
             <hr>
+            
+            <!-- OBSERVACIONES GENERALES -->
             <div class="mb-3">
                 <label for="observaciones_generales" class="form-label">Observaciones generales:</label>
-                <textarea class="form-control" id="observaciones_generales" name="observaciones_generales" rows="5"></textarea>
+                <textarea class="form-control" id="observaciones_generales" name="observaciones_generales" rows="5"><?php echo htmlspecialchars($obs_generales); ?></textarea>
             </div>
 
+            <!-- VEREDICTO -->
             <div class="mb-3">
                 <label class="form-label">Valoración global (Veredicto):</label>
-                <div class="form-check"><input class="form-check-input" type="radio" name="veredicto" value="Favorable y Publicable" required><label class="form-check-label">Favorable y Publicable sin recomendaciones</label></div>
-                <div class="form-check"><input class="form-check-input" type="radio" name="veredicto" value="Favorable con Correcciones"><label class="form-check-label">Favorable y Publicable con correcciones y/o modificaciones</label></div>
-                <div class="form-check"><input class="form-check-input" type="radio" name="veredicto" value="No Publicable"><label class="form-check-label">No se recomienda su publicación</label></div>
+                
+                <!-- NOTA: Eliminamos opción 'Pendiente' del HTML para forzar elección al enviar final,
+                     pero si viene 'Pendiente' de BD, ninguno de estos estará marcado. -->
+
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="veredicto" value="Favorable y Publicable" required
+                    <?php echo ($veredicto_actual == 'Favorable y Publicable') ? 'checked' : ''; ?>>
+                    <label class="form-check-label">Favorable y Publicable sin recomendaciones</label>
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="veredicto" value="Favorable con Correcciones"
+                    <?php echo ($veredicto_actual == 'Favorable con Correcciones') ? 'checked' : ''; ?>>
+                    <label class="form-check-label">Favorable y Publicable con correcciones y/o modificaciones</label>
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="veredicto" value="No Publicable"
+                    <?php echo ($veredicto_actual == 'No Publicable') ? 'checked' : ''; ?>>
+                    <label class="form-check-label">No se recomienda su publicación</label>
+                </div>
             </div>
 
+            <!-- ARGUMENTO RECHAZO -->
+            <!-- La clase d-none se gestionará vía JS, pero PHP rellena el contenido -->
             <div class="mb-3 d-none" id="argumento-rechazo-container">
                 <label for="argumento_rechazo" class="form-label">Argumente los motivos por los cuales no recomienda su publicación:</label>
-                <textarea class="form-control" id="argumento_rechazo" name="argumento_rechazo" rows="4"></textarea>
+                <textarea class="form-control" id="argumento_rechazo" name="argumento_rechazo" rows="4"><?php echo htmlspecialchars($arg_rechazo); ?></textarea>
             </div>
 
-            <button type="submit" class="btn btn-success" id="submitBtn">Guardar Evaluación y Generar PDF</button>
+            <button type="submit" class="btn btn-success" id="submitBtn">Guardar Evaluación</button>
             <button type="button" id="guardarBorradorBtn" class="btn btn-secondary">Guardar Borrador</button>
 
         </form>
@@ -93,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const baseUrl = '<?php echo BASE_URL; ?>';
     const csrfToken = '<?php echo $_SESSION["csrf_token"] ?? ""; ?>';
     const evaluacionId = <?php echo $evaluacion['id']; ?>;
-    const mensajeDiv = document.getElementById('mensaje');
+    const mensajeDiv = document.getElementById('mensaje-gestion'); // Corregido ID
 
     const formEvaluacion = document.getElementById('formEvaluacionExtenso');
     const submitBtn = document.getElementById('submitBtn');
@@ -106,28 +206,43 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnSubirFirmado = document.getElementById('btnSubirFirmado');
     const originalBtnFirmadoText = btnSubirFirmado ? btnSubirFirmado.innerHTML : '';
 
+    // LOGICA VISIBILIDAD RECHAZO
+    function toggleRechazo(value) {
+        const container = document.getElementById('argumento-rechazo-container');
+        const textarea = document.getElementById('argumento_rechazo');
+        if (value === 'No Publicable') {
+            container.classList.remove('d-none');
+            textarea.required = true;
+        } else {
+            container.classList.add('d-none');
+            textarea.required = false;
+        }
+    }
+
+    // 1. Event Listeners para cambios
     document.querySelectorAll('input[name="veredicto"]').forEach(radio => {
         radio.addEventListener('change', function() {
-            const container = document.getElementById('argumento-rechazo-container');
-            const textarea = document.getElementById('argumento_rechazo');
-            if (this.value === 'No Publicable') {
-                container.classList.remove('d-none');
-                textarea.required = true;
-            } else {
-                container.classList.add('d-none');
-                textarea.required = false;
-            }
+            toggleRechazo(this.value);
         });
     });
 
+    // 2. CHECK INICIAL (Para cuando carga un borrador con "No Publicable")
+    const veredictoSeleccionado = document.querySelector('input[name="veredicto"]:checked');
+    if (veredictoSeleccionado) {
+        toggleRechazo(veredictoSeleccionado.value);
+    }
+
+    // --- LOGICA BOTON BORRADOR ---
     if (guardarBorradorBtn) {
         guardarBorradorBtn.addEventListener('click', function() {
             this.disabled = true;
             this.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Guardando...`;
 
+            // Usamos FormData directamente del formulario existente
             const formData = new FormData(formEvaluacion);
-            formData.append('csrf_token', csrfToken);
-
+            formData.append('csrf_token', csrfToken); // Asegúrate de incluir el token CSRF
+            
+            // fetch espera que el backend maneje POST. Asegúrate que tu ruta acepte POST.
             fetch(`${baseUrl}revisorExtensos/guardarBorradorEvaluacion/${evaluacionId}`, {
                 method: 'POST',
                 body: formData
@@ -135,7 +250,12 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(res => res.json())
             .then(data => {
                 const alertClass = data.error ? 'alert-danger' : 'alert-success';
+                // Usamos mensajeDiv que definimos arriba
                 mensajeDiv.innerHTML = `<div class="alert ${alertClass}">${data.mensaje || data.error}</div>`;
+                
+                // Hacemos scroll hacia arriba para ver el mensaje
+                mensajeDiv.scrollIntoView({ behavior: 'smooth' });
+
                 setTimeout(() => { mensajeDiv.innerHTML = ''; }, 3000);
             })
             .catch(error => {
@@ -149,6 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // --- LOGICA ENVIO FINAL ---
     if (formEvaluacion && submitBtn) {
         formEvaluacion.addEventListener('submit', function(event) {
             event.preventDefault();
@@ -156,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Procesando...`;
 
             const formData = new FormData(this);
-            formData.append('csrf_token', csrfToken);
+            formData.append('csrf_token', csrfToken); // Generalmente ya va incluido si está en el input hidden
 
             fetch(`${baseUrl}revisorExtensos/procesarEvaluacion/${evaluacionId}`, {
                 method: 'POST',
@@ -168,6 +289,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     mensajeDiv.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = originalBtnText;
+                    mensajeDiv.scrollIntoView({ behavior: 'smooth' });
                 } else {
                     if (data.requiere_firma) {
                         mensajeDiv.innerHTML = `
@@ -177,8 +299,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <i class="bi bi-download"></i> Descargar PDF para Firmar
                                 </a>
                             </div>`;
+                        // Bloquear formulario
                         formEvaluacion.querySelectorAll('input, textarea, button').forEach(el => el.disabled = true);
                         seccionSubirFirmado.classList.remove('d-none');
+                        seccionSubirFirmado.scrollIntoView({ behavior: 'smooth' });
                     } else {
                         alert(data.mensaje);
                         window.location.href = `${baseUrl}revisorExtensos/dashboard`;
@@ -193,6 +317,8 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+
+    // --- LOGICA SUBIDA PDF ---
     if (formPdfFirmado) {
         formPdfFirmado.addEventListener('submit', function(event) {
             event.preventDefault();
@@ -200,6 +326,7 @@ document.addEventListener('DOMContentLoaded', function() {
             btnSubirFirmado.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Subiendo...`;
 
             const formData = new FormData(this);
+            // CORRECCIÓN CRUCIAL: Agregar CSRF Token manualmente porque este form no lo tiene en HTML
             formData.append('csrf_token', csrfToken);
 
             fetch(`${baseUrl}revisorExtensos/subirPdfFirmado/${evaluacionId}`, {

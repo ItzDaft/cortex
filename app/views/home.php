@@ -67,6 +67,38 @@
                     </div>
                 </div>
             </div>
+                            <!-- MÓDULOS DE GESTIÓN (ACCESOS RÁPIDOS) -->
+    <div class="row mt-4 mb-5">
+        <!-- Módulo 1: Artículos Extensos -->
+        <div class="col-md-6 mb-3">
+            <div class="card h-100 border-primary shadow-sm">
+                <div class="card-body text-center">
+                    <div class="mb-3 text-primary"><i class="bi bi-journal-text fs-1"></i></div>
+                    <h4 class="card-title">Gestión de Extensos</h4>
+                    <p class="card-text text-muted">Filtra formatos, asigna revisores, valida firmas y resuelve conflictos.</p>
+                    <a href="<?php echo BASE_URL; ?>revisor/gestionExtensos" class="btn btn-primary stretched-link">
+                        Ir a Extensos <i class="bi bi-arrow-right-circle ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo 2: Revisores de Extenso -->
+        <div class="col-md-6 mb-3">
+            <div class="card h-100 border-info shadow-sm">
+                <div class="card-body text-center">
+                    <div class="mb-3 text-info"><i class="bi bi-people-fill fs-1"></i></div>
+                    <h4 class="card-title">Directorio de Revisores</h4>
+                    <p class="card-text text-muted">Consulta la carga de trabajo, perfiles y disponibilidad de tu equipo.</p>
+                    <a href="<?php echo BASE_URL; ?>revisor/gestionRevisores" class="btn btn-info text-white stretched-link">
+                        Ver Revisores <i class="bi bi-arrow-right-circle ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-4">
             <?php endif; ?>
              <?php if (in_array('Revisor de Extensos', $_SESSION['usuario_roles'])): ?>
             <div class="col-md-6 col-lg-4">
@@ -78,6 +110,7 @@
                     </div>
                 </div>
             </div>
+
             <?php endif; ?>
 
                 <?php if (in_array('Autor', $_SESSION['usuario_roles']) || in_array('Asistente', $_SESSION['usuario_roles']) || in_array('Asistente con Cartel', $_SESSION['usuario_roles'])): ?>
