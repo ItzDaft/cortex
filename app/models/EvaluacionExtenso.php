@@ -29,24 +29,7 @@ class EvaluacionExtenso {
         }
     }
 
-    /**
-     * Busca las evaluaciones pendientes asignadas a un revisor específico.
-     */
-    public static function buscarAsignadasPorRevisor(int $revisor_id): array {
-        $pdo = Database::conectar();
-        $sql = "SELECT ee.*, ev.intento, r.titulo 
-                FROM evaluaciones_extensos ee
-                JOIN extenso_versiones ev ON ee.extenso_version_id = ev.id
-                JOIN extensos e ON ev.extenso_id = e.id
-                JOIN resumenes r ON e.resumen_id = r.id
-                JOIN usuarios u ON ee.revisor_id = u.id
-                WHERE ee.revisor_id = :revisor_id 
-                AND (ee.estatus_evaluacion IS NULL OR ee.estatus_evaluacion = 'Pendiente')
-                AND r.area_id = u.area_id"; 
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute(['revisor_id' => $revisor_id]);
-        return $stmt->fetchAll();
-    }
+
 
     public static function buscarPorId(int $id) {
         $pdo = Database::conectar();
@@ -389,13 +372,33 @@ class EvaluacionExtenso {
         $stmt->execute(['area_id' => $area_id]);
         return $stmt->fetchAll();
     }
-        /**
-     * (NUEVO) Busca TODAS las evaluaciones donde el revisor ya emitió un veredicto.
-     * Incluye: Pendientes de Firma, Validada, Rechazada, Favorable, No Publicable.
+     /**
+     * Busca las evaluaciones PENDIENTES (Aún no evaluadas).
+     * 
+     */
+    public static function buscarAsignadasPorRevisor(int $revisor_id): array {
+        $pdo = Database::conectar();
+        $sql = "SELECT ee.*, ev.intento, ev.archivo_ruta, r.titulo 
+                FROM evaluaciones_extensos ee
+                JOIN extenso_versiones ev ON ee.extenso_version_id = ev.id
+                JOIN extensos e ON ev.extenso_id = e.id
+                JOIN resumenes r ON e.resumen_id = r.id
+                JOIN usuarios u ON ee.revisor_id = u.id
+                WHERE ee.revisor_id = :revisor_id 
+                AND (ee.estatus_evaluacion = 'Pendiente' OR ee.veredicto = 'Pendiente')
+                AND r.area_id = u.area_id"; 
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute(['revisor_id' => $revisor_id]);
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Busca TODAS las evaluaciones donde el revisor ya emitió un veredicto.
+     * 
      */
     public static function buscarRealizadasPorRevisor(int $revisor_id): array {
         $pdo = Database::conectar();
-        $sql = "SELECT ee.*, ev.intento, r.titulo 
+        $sql = "SELECT ee.*, ev.intento, ev.archivo_ruta, r.titulo, ee.pdf_firmado_ruta
                 FROM evaluaciones_extensos ee
                 JOIN extenso_versiones ev ON ee.extenso_version_id = ev.id
                 JOIN extensos e ON ev.extenso_id = e.id

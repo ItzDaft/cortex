@@ -58,15 +58,6 @@
             </div>
             <?php endif; ?>
             <?php if (in_array('Coordinador de Area', $_SESSION['usuario_roles'])): ?>
-            <div class="col-md-6 col-lg-4">
-                <div class="card h-100 shadow-sm action-card">
-                    <div class="card-body text-center d-flex flex-column">
-                        <h5 class="card-title"><i class="bi bi-person-workspace text-info"></i><br>Gestión de Extensos</h5>
-                        <p class="card-text flex-grow-1">Administra los artículos extensos de tu área, asigna revisores y valida el formato de los envíos.</p>
-                        <a href="<?php echo BASE_URL; ?>revisor/gestionExtensos" class="btn btn-info text-white mt-auto">Administrar Extensos</a>
-                    </div>
-                </div>
-            </div>
                             <!-- MÓDULOS DE GESTIÓN (ACCESOS RÁPIDOS) -->
     <div class="row mt-4 mb-5">
         <!-- Módulo 1: Artículos Extensos -->
@@ -97,6 +88,18 @@
             </div>
         </div>
     </div>
+    <div class="col-md-4 mb-3">
+            <div class="card h-100 border-success shadow-sm">
+                <div class="card-body text-center">
+                    <div class="mb-3 text-success"><i class="bi bi-clipboard-check fs-1"></i></div>
+                    <h4 class="card-title">Supervisión Detallada</h4>
+                    <p class="card-text text-muted small">Bitácora completa de evaluaciones, historial, estatus y descarga de firmas.</p>
+                    <a href="<?php echo BASE_URL; ?>revisor/supervisionEvaluaciones" class="btn btn-success text-white stretched-link">
+                        Ver Supervisión <i class="bi bi-arrow-right-circle ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div
 
     <hr class="my-4">
             <?php endif; ?>

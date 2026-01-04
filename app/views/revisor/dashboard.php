@@ -40,7 +40,7 @@ if (isset($revisor['area_id'])) {
                                     <td><?php echo htmlspecialchars($revision['titulo']); ?></td>
                                     <td>
                                         <?php if (str_contains($revision['autor_roles'] ?? '', 'Autor')): ?>
-                                            <span class="badge bg-primary">Ponencia</span>
+                                            <span class="badge bg-primary">Extenso</span>
                                         <?php elseif (str_contains($revision['autor_roles'] ?? '', 'Asistente con Cartel')): ?>
                                             <span class="badge bg-secondary">Cartel</span>
                                         <?php else: ?>
@@ -87,7 +87,7 @@ if (isset($revisor['area_id'])) {
                                     <td><?php echo htmlspecialchars($revision['titulo']); ?></td>
                                     <td>
                                         <?php if (str_contains($revision['autor_roles'] ?? '', 'Autor')): ?>
-                                            <span class="badge bg-primary bg-opacity-75">Ponencia</span>
+                                            <span class="badge bg-primary bg-opacity-75">Extenso</span>
                                         <?php else: ?>
                                             <span class="badge bg-secondary bg-opacity-75">Cartel</span>
                                         <?php endif; ?>

@@ -1,6 +1,6 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>Mis Resúmenes y Artículos</h1>
-   <!-- <a href="<?php echo BASE_URL; ?>resumen/crear" class="btn btn-primary"><i class="bi bi-plus-circle-fill me-2"></i>Enviar Nuevo Resumen</a> -->
+    <a href="<?php echo BASE_URL; ?>resumen/crear" class="btn btn-primary"><i class="bi bi-plus-circle-fill me-2"></i>Enviar Nuevo Resumen</a>
     
 </div>
 

@@ -1,9 +1,33 @@
 <?php
 
-// Asegúrate de que esta ruta sea correcta en tu estructura
 define('FPDF_PATH', BACKEND_ROOT . '/app/lib/fpdf186/fpdf.php');
 
 class ReporteController {
+
+    /**
+     * Helper para decodificar texto UTF-8 a ISO-8859-1 compatible con FPDF.
+     * Reemplaza a la función obsoleta utf8_decode() usando iconv para PHP 8.2+.
+     */
+    private function decode($text) {
+        return iconv('UTF-8', 'ISO-8859-1//TRANSLIT', $text);
+    }
+
+    /**
+     * Obtiene el nombre del área basada en el ID.
+     * AJUSTAR ESTOS VALORES SEGÚN TU BASE DE DATOS REAL.
+     */
+    private function obtenerNombreArea($area_id) {
+        $areas = [
+            1 => 'Ingenierías y Tecnología',
+            2 => 'Ciencias de la Salud',
+            3 => 'Ciencias Naturales y Exactas',
+            4 => 'Ciencias Sociales y Administrativas',
+            5 => 'Educación y Humanidades',
+            6 => 'Ciencias Agropecuarias',
+            7 => 'Artes y Arquitectura'
+        ];
+        return $areas[$area_id] ?? 'Área no especificada';
+    }
 
     public function generarEvaluacionPDF($evaluacion_id) {
         if (!isset($_SESSION['usuario_id'])) { die('Acceso denegado.'); }
@@ -20,104 +44,194 @@ class ReporteController {
 
         $revisor = Usuario::buscarPorId($evaluacion['revisor_id']);
 
+        $campoConocimiento = 'No especificado';
+        
+        if (isset($evaluacion['extenso_id'])) {
+            $extenso = Extenso::buscarPorId($evaluacion['extenso_id']);
+            
+            if ($extenso && isset($extenso['resumen_id'])) {
+                $resumen = Resumen::buscarPorId($extenso['resumen_id']);
+                
+                if ($resumen && isset($resumen['area_id'])) {
+                    $campoConocimiento = $this->obtenerNombreArea($resumen['area_id']);
+                }
+            }
+        }
+        
+        // Fallback si no se encontró en la relación anterior, intentar buscar directo en evaluación si existe el campo
+        if ($campoConocimiento === 'No especificado' && isset($evaluacion['area'])) {
+             $campoConocimiento = $evaluacion['area'];
+        }
+
+        // Limpiar buffer
+        if (ob_get_length()) ob_clean();
+
         require_once FPDF_PATH;
 
+        // Instancia FPDF
         $pdf = new FPDF();
         $pdf->AddPage();
         $pdf->SetMargins(20, 20, 20); 
         $pdf->SetAutoPageBreak(true, 20);
 
-        $rutaLogo = BACKEND_ROOT . '/assets/img/logo.png'; 
+        // --- 1. ENCABEZADO Y LOGO ---
+        $rutaLogo = BACKEND_ROOT . '/public/assets/img/logo.png'; 
         if (file_exists($rutaLogo)) {
-            $pdf->Image($rutaLogo, 20, 15, 30); // X, Y, Ancho
-            $pdf->Ln(5);
+            $pdf->Image($rutaLogo, 20, 10, 25); 
         }
-        
-        $pdf->SetFont('Arial', 'B', 16);
-        $pdf->Cell(0, 10, utf8_decode('DICTAMEN DE ARTÍCULO EXTENSO'), 0, 1, 'C');
-        $pdf->SetFont('Arial', '', 10);
-        $pdf->Cell(0, 10, utf8_decode('Fecha de emisión: ' . date('d/m/Y')), 0, 1, 'C');
-        $pdf->Ln(10);
 
-        // --- DATOS DEL ARTÍCULO ---
-        $pdf->SetFillColor(240, 240, 240); // Gris claro para encabezados de sección
+        $pdf->SetFont('Arial', '', 10);
+        $pdf->SetXY(20, 10); 
+        $pdf->Cell(0, 10, $this->decode('FORMATO PU/07'), 0, 1, 'R');
+        
+        $pdf->Ln(10); 
+        
         $pdf->SetFont('Arial', 'B', 12);
-        $pdf->Cell(0, 10, utf8_decode(' DATOS DEL ARTÍCULO'), 1, 1, 'L', true);
-        
-        $pdf->SetFont('Arial', 'B', 11);
-        $pdf->Cell(40, 10, utf8_decode('Título:'), 0, 0);
-        
-        $pdf->SetFont('Arial', '', 11);
-        // MultiCell para títulos largos
-        $pdf->MultiCell(0, 10, utf8_decode($evaluacion['titulo']));
+        $pdf->MultiCell(0, 6, $this->decode('CRITERIOS PARA EL ARBITRAJE EXTERNO DE EXTENSOS QUE PRETENDEN PUBLICARSE EN LA REVISTA'), 0, 'C');
         $pdf->Ln(5);
 
-        // --- RESPUESTAS DEL CUESTIONARIO ---
-        $respuestas = json_decode($evaluacion['respuestas_formulario'], true);
-        
-        // Estas preguntas coinciden con tu HTML
-        $preguntas = [
-            1 => '¿Se plantea con claridad el tema abordado en el artículo?',
-            2 => '¿Se presenta una fundamentación teórica pertinente?',
-            3 => '¿Se integra contenido pertinente y relevante?',
-            4 => '¿Los aspectos teóricos son suficientes?',
-            5 => '¿Los hallazgos contribuyen a la reflexión/explicación?',
-            6 => '¿Se presentan las referencias bibliográficas apropiadas?'
-        ];
-
-        $pdf->SetFont('Arial', 'B', 12);
-        $pdf->Cell(0, 10, utf8_decode(' CRITERIOS DE EVALUACIÓN'), 1, 1, 'L', true);
+        // --- 2. DATOS DE IDENTIFICACIÓN ---
+        $pdf->SetFont('Arial', 'B', 11);
+        $pdf->Cell(0, 6, $this->decode('Datos de identificación del Extenso'), 0, 1, 'L');
         $pdf->Ln(2);
 
-        $pdf->SetFont('Arial', '', 11);
+        $pdf->SetFont('Arial', 'B', 10);
+        $pdf->Cell(45, 6, $this->decode('TÍTULO DEL Extenso:'), 0, 0);
+        $pdf->SetFont('Arial', '', 10);
+        
+        $x = $pdf->GetX();
+        $y = $pdf->GetY();
+        $pdf->MultiCell(0, 6, $this->decode(strtoupper($evaluacion['titulo'])));
+        $pdf->SetXY($x, $pdf->GetY()); 
+
+        $pdf->Ln(2);
+        
+        $pdf->SetFont('Arial', 'B', 10);
+        $pdf->Cell(45, 6, $this->decode('TIPO DE CONTRIBUCIÓN:'), 0, 0);
+        $pdf->SetFont('Arial', '', 10);
+        $pdf->Cell(0, 6, $this->decode('Divulgación'), 0, 1); 
+
+        $pdf->SetFont('Arial', 'B', 10);
+        $pdf->Cell(55, 6, $this->decode('CAMPO DEL CONOCIMIENTO:'), 0, 0);
+        $pdf->SetFont('Arial', '', 10);
+        $pdf->Cell(0, 6, $this->decode($campoConocimiento), 0, 1); 
+        $pdf->Ln(5);
+
+        // --- 3. CRITERIOS (TABLA) ---
+        $respuestas = json_decode($evaluacion['respuestas_formulario'], true);
+        
+        $preguntas = [
+            1 => 'Se plantea con claridad el tema abordado en el artículo',
+            2 => 'Se presenta una fundamentación teórica pertinente de acuerdo con el área de conocimiento en la cual se inscribe el tema',
+            3 => 'Se integra contenido pertinente y relevante para el desarrollo del área de conocimiento',
+            4 => 'Los aspectos teóricos que presenta el texto son suficientes para el análisis que presenta',
+            5 => 'Los aspectos metodológicos que presenta el texto son suficientes para el desarrollo del tema',
+            6 => 'Los hallazgos de la investigación contribuyen a la reflexión y/o explicación del tema tratado'
+        ];
+
+        $pdf->SetFont('Arial', 'B', 11);
+        $pdf->Cell(0, 6, $this->decode('Criterios generales de evaluación'), 0, 1, 'L');
+        
+        $pdf->SetFont('Arial', 'I', 10);
+        $pdf->Cell(0, 6, $this->decode('Contenido'), 0, 1, 'L');
+        $pdf->Ln(2);
+
+        // Encabezado tabla
+        $pdf->SetFont('Arial', 'B', 10);
+        $pdf->Cell(150, 6, $this->decode('Criterio'), 0, 0);
+        $pdf->Cell(20, 6, $this->decode('Evaluación'), 0, 1, 'C'); 
+        $pdf->Line($pdf->GetX(), $pdf->GetY(), $pdf->GetX() + 170, $pdf->GetY()); 
+        $pdf->Ln(2);
+
+        $pdf->SetFont('Arial', '', 10);
         foreach ($preguntas as $num => $pregunta) {
             $respuestaRaw = $respuestas['pregunta_'.$num] ?? 'N/A';
-            $respuesta = ($respuestaRaw === 'si') ? 'SÍ' : (($respuestaRaw === 'no') ? 'NO' : 'N/A');
+            $respuesta = ($respuestaRaw === 'si') ? 'SÍ' : (($respuestaRaw === 'no') ? 'NO' : '-');
             
-            // Imprimimos Pregunta
-            $pdf->SetFont('Arial', '', 10);
-            $pdf->MultiCell(140, 6, utf8_decode($num . '. ' . $pregunta), 0, 'L');
+            $yInicio = $pdf->GetY();
+            $pdf->MultiCell(150, 5, $this->decode($num . '. ' . $pregunta), 0, 'L');
             
-            // Imprimimos Respuesta al lado (truco de cursor)
-            $yActual = $pdf->GetY();
-            $pdf->SetXY(160, $yActual - 6); // Movemos cursor a la derecha
-            $pdf->SetFont('Arial', 'B', 10);
-            $pdf->Cell(30, 6, utf8_decode($respuesta), 0, 1, 'C');
+            $yFin = $pdf->GetY();
+            $altura = $yFin - $yInicio;
             
-            $pdf->Ln(2); // Espacio entre preguntas
+            $pdf->SetXY(170, $yInicio); 
+            $pdf->Cell(20, $altura, $this->decode($respuesta), 0, 1, 'C');
+            
+            $pdf->SetY($yFin); 
+            $pdf->Ln(2); 
         }
         $pdf->Ln(5);
 
-        // --- OBSERVACIONES Y VEREDICTO ---
-        $pdf->SetFont('Arial', 'B', 12);
-        $pdf->Cell(0, 10, utf8_decode(' RESULTADO DE LA EVALUACIÓN'), 1, 1, 'L', true);
+        // --- 4. OBSERVACIONES ---
+        $pdf->SetFont('Arial', 'B', 10);
+        $pdf->Cell(0, 6, $this->decode('Observaciones generales:'), 0, 1);
+        $pdf->SetFont('Arial', '', 10);
         
+        $obs = $evaluacion['observaciones_generales'] ?? '';
+        if (empty($obs)) $obs = "Sin observaciones.";
+        $pdf->MultiCell(0, 6, $this->decode($obs), 'B', 'L'); 
+        $pdf->Ln(10);
+
+        // --- 5. VALORACIÓN GLOBAL ---
         $pdf->SetFont('Arial', 'B', 11);
-        $pdf->Cell(0, 10, utf8_decode('Observaciones Generales:'), 0, 1);
-        $pdf->SetFont('Arial', '', 11);
-        $pdf->MultiCell(0, 6, utf8_decode($evaluacion['observaciones_generales'] ?? 'Sin observaciones.'));
+        $pdf->Cell(0, 6, $this->decode('Valoración global'), 0, 1, 'L');
+        $pdf->SetFont('Arial', '', 10);
+        $pdf->Cell(0, 6, $this->decode('Con base en los criterios anteriores, considera usted que la obra es:'), 0, 1, 'L');
+        $pdf->Ln(2);
+
+        $v = $evaluacion['veredicto'];
+        $m1 = ($v === 'Favorable y Publicable') ? 'X' : ' ';
+        $m2 = ($v === 'Favorable con Correcciones') ? 'X' : ' ';
+        $m3 = ($v === 'No Publicable') ? 'X' : ' ';
+
+        $pdf->Cell(10, 6, $this->decode('*'), 0, 0);
+        $pdf->Cell(120, 6, $this->decode('Favorable y Publicable sin recomendaciones'), 0, 0);
+        $pdf->Cell(20, 6, $this->decode('( ' . $m1 . ' )'), 0, 1);
+
+        $pdf->Cell(10, 6, $this->decode('*'), 0, 0);
+        $pdf->Cell(120, 6, $this->decode('Favorable y Publicable con correcciones y/o modificaciones'), 0, 0);
+        $pdf->Cell(20, 6, $this->decode('( ' . $m2 . ' )'), 0, 1);
+
+        $pdf->Cell(10, 6, $this->decode('*'), 0, 0);
+        $pdf->Cell(120, 6, $this->decode('No se recomienda su publicación'), 0, 0);
+        $pdf->Cell(20, 6, $this->decode('( ' . $m3 . ' )'), 0, 1);
+
         $pdf->Ln(5);
+        $pdf->SetFont('Arial', 'B', 10);
+        $pdf->Line($pdf->GetX(), $pdf->GetY()+6, $pdf->GetX() + 170, $pdf->GetY()+6);
+        $pdf->Ln(10); 
 
-        $pdf->SetFont('Arial', 'B', 11);
-        $pdf->Cell(0, 10, utf8_decode('Veredicto Final:'), 0, 1);
-        $pdf->SetFont('Arial', 'B', 14); // Más grande para resaltar
-        // Ya sabemos que es "Favorable y Publicable", pero usamos el dato de la BD por consistencia
-        $pdf->Cell(0, 10, utf8_decode(strtoupper($evaluacion['veredicto'])), 0, 1, 'C');
-        $pdf->SetFont('Arial', '', 11);
-
-        // Se eliminó la lógica de "No Publicable" y argumentos de rechazo
-        // ya que este documento está restringido solo para dictámenes favorables.
         
-        $pdf->Ln(25); // Espacio para firma
+        if ($pdf->GetY() > 240) {
+            $pdf->AddPage();
+        }
 
-        // --- FIRMA ---
-        $pdf->Cell(0, 5, '_________________________________', 0, 1, 'C');
-        $pdf->SetFont('Arial', 'B', 11);
-        $pdf->Cell(0, 8, utf8_decode($revisor['nombre_completo']), 0, 1, 'C');
-        $pdf->SetFont('Arial', 'I', 10);
-        $pdf->Cell(0, 5, utf8_decode('Firma del Revisor'), 0, 1, 'C');
+        $pdf->Ln(10);
 
-        // Nombre del archivo de descarga
+        $meses = array("Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre");
+        $fecha = "Fecha del dictamen: " . date('d')." de ".$meses[date('n')-1]. " de ".date('Y');
+        
+        $pdf->SetFont('Arial', '', 10);
+        $pdf->Cell(0, 6, $this->decode($fecha), 0, 1, 'R');
+
+        $pdf->Ln(15); 
+
+        
+        $xCenter = 65;
+
+        $pdf->SetFont('Arial', 'B', 10);
+        $pdf->SetX($xCenter);
+        $pdf->Cell(80, 0, '', 'T'); 
+        
+        $pdf->Ln(2); 
+        
+        $pdf->SetX($xCenter);
+        $pdf->MultiCell(80, 5, $this->decode($revisor['nombre_completo']), 0, 'C');
+        
+        $pdf->SetX($xCenter);
+        $pdf->SetFont('Arial', '', 9);
+        $pdf->Cell(80, 5, $this->decode('Firma del Revisor'), 0, 0, 'C');
+
         $pdf->Output('D', 'Dictamen_Favorable_' . $evaluacion_id . '.pdf');
     }
 }

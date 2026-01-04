@@ -167,131 +167,9 @@
         </div>
     </div>
     <?php endif; ?>
-
-    <!-- SUPERVISIÓN DETALLADA (Todas las asignaciones) -->
-    <div class="card mb-5">
-        <div class="card-header">
-            <i class="bi bi-eye me-1"></i> Supervisión Detallada de Evaluaciones
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-sm table-hover align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Artículo</th>
-                            <th>Revisor</th>
-                            <th>Estatus</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-validar-evaluaciones">
-                        <?php if (empty($asignacionesExtensos)): ?>
-                            <tr><td colspan="4" class="text-center text-muted">No hay asignaciones registradas.</td></tr>
-                        <?php else: ?>
-                            <?php foreach ($asignacionesExtensos as $asig): ?>
-                                <tr id="eval-row-<?php echo $asig['evaluacion_id']; ?>">
-                                    <td><?php echo htmlspecialchars($asig['titulo_articulo']); ?></td>
-                                    <td><?php echo htmlspecialchars($asig['nombre_revisor']); ?></td>
-                                    <td>
-                                        <?php 
-                                            $est = $asig['estatus_evaluacion'] ?? 'Pendiente';
-                                            $badge = 'bg-secondary';
-                                            if ($est === 'Validada') $badge = 'bg-success';
-                                            elseif ($est === 'Pendiente de Firma' || $est === 'Pendiente de Validación') $badge = 'bg-warning text-dark';
-                                            elseif ($est === 'Rechazada por Coordinador') $badge = 'bg-danger';
-                                        ?>
-                                        <span class="badge <?php echo $badge; ?>"><?php echo $est; ?></span>
-                                        <?php if (!empty($asig['veredicto']) && $asig['veredicto'] !== 'Pendiente'): ?>
-                                            <br><small class="text-muted"><?php echo htmlspecialchars($asig['veredicto']); ?></small>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <!-- BOTÓN PARA VER EL DICTAMEN COMPLETO (FORMULARIO) -->
-                                        <?php if (!empty($asig['respuestas_formulario'])): ?>
-                                            <button class="btn btn-sm btn-info text-white btn-ver-dictamen mb-1" 
-                                                data-titulo="<?php echo htmlspecialchars($asig['titulo_articulo']); ?>"
-                                                data-revisor="<?php echo htmlspecialchars($asig['nombre_revisor']); ?>"
-                                                data-veredicto="<?php echo htmlspecialchars($asig['veredicto']); ?>"
-                                                data-obs="<?php echo htmlspecialchars($asig['observaciones_generales'] ?? ''); ?>"
-                                                data-rechazo="<?php echo htmlspecialchars($asig['argumento_rechazo'] ?? ''); ?>"
-                                                data-respuestas="<?php echo htmlspecialchars($asig['respuestas_formulario']); ?>"
-                                                data-pdf="<?php echo htmlspecialchars($asig['pdf_firmado_ruta'] ?? ''); ?>">
-                                                <i class="bi bi-card-text"></i> Ver Dictamen
-                                            </button>
-                                        <?php endif; ?>
-
-                                        <!-- BOTONES DE VALIDACIÓN (Si aplica) -->
-                                        <?php if ($est === 'Pendiente de Validación'): ?>
-                                            <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-success btn-aprobar-eval" data-id="<?php echo $asig['evaluacion_id']; ?>" title="Validar Firma"><i class="bi bi-check-lg"></i></button>
-                                                <button class="btn btn-danger btn-rechazar-eval" data-id="<?php echo $asig['evaluacion_id']; ?>" data-bs-toggle="modal" data-bs-target="#rechazoCoordModal" title="Rechazar"><i class="bi bi-x-lg"></i></button>
-                                            </div>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
 </div>
 
 <!-- --- MODALES --- -->
-
-<!-- Modal Ver Dictamen Completo -->
-<div class="modal fade" id="verDictamenModal" tabindex="-1">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header bg-light">
-        <h5 class="modal-title"><i class="bi bi-clipboard-data"></i> Detalle de la Evaluación</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-          <div class="alert alert-primary d-flex align-items-center mb-3">
-              <i class="bi bi-person-badge fs-3 me-3"></i>
-              <div>
-                  <strong>Revisor:</strong> <span id="dictamen-revisor"></span><br>
-                  <strong>Artículo:</strong> <span id="dictamen-titulo" class="fst-italic"></span>
-              </div>
-          </div>
-
-          <div class="mb-4">
-              <h6 class="border-bottom pb-2 text-primary">Respuestas del Cuestionario</h6>
-              <div id="dictamen-respuestas" class="ps-2">
-                  <!-- Aquí se inyectarán las preguntas y respuestas -->
-              </div>
-          </div>
-
-          <div class="mb-4">
-              <h6 class="border-bottom pb-2 text-primary">Conclusiones</h6>
-              <p><strong>Observaciones Generales:</strong></p>
-              <div id="dictamen-obs" class="bg-light p-3 rounded mb-2 border"></div>
-              
-              <div id="dictamen-rechazo-container" class="d-none">
-                  <p class="text-danger fw-bold mt-2">Motivo de No Publicación:</p>
-                  <div id="dictamen-rechazo" class="alert alert-danger"></div>
-              </div>
-
-              <div class="mt-3">
-                  <strong>Veredicto Final:</strong> 
-                  <span id="dictamen-veredicto" class="badge bg-secondary fs-6"></span>
-              </div>
-          </div>
-
-          <div id="dictamen-pdf-container" class="d-none border-top pt-3 text-center">
-              <a id="dictamen-pdf-link" href="#" target="_blank" class="btn btn-outline-danger">
-                  <i class="bi bi-file-earmark-pdf-fill"></i> Ver Documento Firmado
-              </a>
-          </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- Modal Devolver Formato -->
 <div class="modal fade" id="devolverModal" tabindex="-1">
@@ -369,23 +247,6 @@
   </div>
 </div>
 
-<!-- Modal Rechazo Coordinador -->
-<div class="modal fade" id="rechazoCoordModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header bg-danger text-white"><h5 class="modal-title">Rechazar Evaluación</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-      <div class="modal-body">
-        <form id="rechazoCoordForm">
-            <input type="hidden" id="eval_id_rechazo">
-            <label class="form-label">Motivo (para el revisor):</label>
-            <textarea class="form-control" id="comentarios_coord_rechazo" rows="3" required placeholder="Ej: El documento firmado no corresponde..."></textarea>
-        </form>
-      </div>
-      <div class="modal-footer"><button type="submit" form="rechazoCoordForm" class="btn btn-danger">Rechazar</button></div>
-    </div>
-  </div>
-</div>
-
 <!-- Modal Tercer Revisor -->
 <div class="modal fade" id="tercerRevisorModal" tabindex="-1">
   <div class="modal-dialog">
@@ -424,19 +285,7 @@ document.addEventListener('DOMContentLoaded', function() {
         asignar: new bootstrap.Modal(document.getElementById('asignarModal')),
         devolver: new bootstrap.Modal(document.getElementById('devolverModal')),
         cambiar: new bootstrap.Modal(document.getElementById('cambiarRevisoresModal')),
-        rechazo: new bootstrap.Modal(document.getElementById('rechazoCoordModal')),
-        tercero: new bootstrap.Modal(document.getElementById('tercerRevisorModal')),
-        dictamen: new bootstrap.Modal(document.getElementById('verDictamenModal'))
-    };
-
-    // MAPA DE PREGUNTAS (Para mostrar el texto completo)
-    const preguntasMap = {
-        'pregunta_1': '1. ¿Se plantea con claridad el tema abordado en el artículo?',
-        'pregunta_2': '2. ¿Se presenta una fundamentación teórica pertinente?',
-        'pregunta_3': '3. ¿Se integra contenido pertinente y relevante?',
-        'pregunta_4': '4. ¿Los aspectos teóricos que presenta el texto son suficientes?',
-        'pregunta_5': '5. ¿Los hallazgos contribuyen a la reflexión/explicación?',
-        'pregunta_6': '6. ¿Se presentan las referencias bibliográficas apropiadas?'
+        tercero: new bootstrap.Modal(document.getElementById('tercerRevisorModal'))
     };
 
     // --- DELEGACIÓN DE EVENTOS (CLICK) ---
@@ -444,59 +293,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const t = event.target.closest('button');
         if (!t) return;
 
-        // 1. Ver Dictamen (Lógica Nueva)
-        if (t.classList.contains('btn-ver-dictamen')) {
-            // Llenar datos básicos
-            document.getElementById('dictamen-titulo').textContent = t.dataset.titulo;
-            document.getElementById('dictamen-revisor').textContent = t.dataset.revisor;
-            document.getElementById('dictamen-veredicto').textContent = t.dataset.veredicto;
-            document.getElementById('dictamen-obs').textContent = t.dataset.obs || 'Sin observaciones.';
-            
-            // Llenar Rechazo
-            const rechazoDiv = document.getElementById('dictamen-rechazo-container');
-            if (t.dataset.rechazo) {
-                rechazoDiv.classList.remove('d-none');
-                document.getElementById('dictamen-rechazo').textContent = t.dataset.rechazo;
-            } else {
-                rechazoDiv.classList.add('d-none');
-            }
-
-            // Llenar PDF
-            const pdfDiv = document.getElementById('dictamen-pdf-container');
-            if (t.dataset.pdf) {
-                pdfDiv.classList.remove('d-none');
-                document.getElementById('dictamen-pdf-link').href = `${baseUrl}archivo/ver/evaluaciones_firmadas/${t.dataset.pdf}`;
-            } else {
-                pdfDiv.classList.add('d-none');
-            }
-
-            // Llenar Preguntas/Respuestas (Decodificar JSON)
-            const container = document.getElementById('dictamen-respuestas');
-            container.innerHTML = ''; // Limpiar
-            try {
-                const respuestas = JSON.parse(t.dataset.respuestas);
-                for (const [key, value] of Object.entries(respuestas)) {
-                    const preguntaTexto = preguntasMap[key] || key;
-                    const respuestaBadge = (value === 'si') 
-                        ? '<span class="badge bg-success"><i class="bi bi-check"></i> SÍ</span>' 
-                        : '<span class="badge bg-danger"><i class="bi bi-x"></i> NO</span>';
-                    
-                    const div = document.createElement('div');
-                    div.className = 'mb-2 pb-2 border-bottom';
-                    div.innerHTML = `<div class="d-flex justify-content-between align-items-center">
-                                        <span class="small text-dark">${preguntaTexto}</span>
-                                        ${respuestaBadge}
-                                     </div>`;
-                    container.appendChild(div);
-                }
-            } catch (e) {
-                container.innerHTML = '<p class="text-muted fst-italic">No se pudieron cargar las respuestas detalladas.</p>';
-            }
-
-            modalObjects.dictamen.show();
-        }
-
-        // 2. Botones de Modales Simples
+        // 1. Modales Simples
         if (t.classList.contains('btn-devolver')) {
             document.getElementById('extenso_id_devolver').value = t.dataset.extensoId;
         }
@@ -505,9 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (t.classList.contains('btn-cambiar-revisores')) {
             document.getElementById('extenso_id_cambiar').value = t.dataset.extensoId;
-            // Resetear checkboxes
             document.querySelectorAll('#revisores-change-container input').forEach(c => c.checked = false);
-            // Cargar actuales (opcional, mejora UX)
             fetch(`${baseUrl}revisor/obtenerRevisoresAsignados/${t.dataset.extensoId}`)
                 .then(r => r.json())
                 .then(ids => {
@@ -517,25 +312,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 });
         }
-        if (t.classList.contains('btn-rechazar-eval')) {
-            document.getElementById('eval_id_rechazo').value = t.dataset.id;
-        }
         if (t.classList.contains('btn-asignar-tercero')) {
             document.getElementById('extenso_version_id_tercero').value = t.dataset.extensoId;
         }
 
-        // 3. Botones de Acción Directa (Confirmación)
+        // 2. Acciones Directas (Confirmación)
         if (t.classList.contains('btn-aprobar-formato')) {
             if(confirm('¿Aprobar formato y pasar a asignación?')) {
                 apiCall('revisor/aprobarFormatoExtenso', { extenso_id: t.dataset.extensoId }, () => {
                     document.getElementById(`row-filtro-${t.dataset.extensoId}`).remove();
-                });
-            }
-        }
-        if (t.classList.contains('btn-aprobar-eval')) {
-            if(confirm('¿Validar esta evaluación y firma? Esto puede detonar el dictamen final.')) {
-                apiCall('revisor/validarEvaluacionFirmada', { evaluacion_id: t.dataset.id, accion: 'Validada' }, () => {
-                    location.reload(); 
                 });
             }
         }
@@ -593,19 +378,6 @@ document.addEventListener('DOMContentLoaded', function() {
             revisor_id: radio.value 
         }, () => {
             modalObjects.tercero.hide();
-            location.reload();
-        });
-    });
-
-    // Rechazo Coordinador
-    document.getElementById('rechazoCoordForm').addEventListener('submit', e => {
-        e.preventDefault();
-        apiCall('revisor/validarEvaluacionFirmada', { 
-            evaluacion_id: document.getElementById('eval_id_rechazo').value, 
-            accion: 'Rechazada por Coordinador', 
-            comentarios: document.getElementById('comentarios_coord_rechazo').value 
-        }, () => {
-            modalObjects.rechazo.hide();
             location.reload();
         });
     });

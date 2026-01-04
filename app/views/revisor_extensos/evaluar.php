@@ -156,14 +156,12 @@ $arg_rechazo      = $evaluacion['argumento_rechazo'] ?? '';
                 </div>
             </div>
 
-            <!-- ARGUMENTO RECHAZO -->
-            <!-- La clase d-none se gestionará vía JS, pero PHP rellena el contenido -->
             <div class="mb-3 d-none" id="argumento-rechazo-container">
                 <label for="argumento_rechazo" class="form-label">Argumente los motivos por los cuales no recomienda su publicación:</label>
                 <textarea class="form-control" id="argumento_rechazo" name="argumento_rechazo" rows="4"><?php echo htmlspecialchars($arg_rechazo); ?></textarea>
             </div>
 
-            <button type="submit" class="btn btn-success" id="submitBtn">Guardar Evaluación</button>
+            <button type="submit" class="btn btn-success" id="submitBtn">Enviar Evaluación</button>
             <button type="button" id="guardarBorradorBtn" class="btn btn-secondary">Guardar Borrador</button>
 
         </form>
@@ -206,7 +204,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnSubirFirmado = document.getElementById('btnSubirFirmado');
     const originalBtnFirmadoText = btnSubirFirmado ? btnSubirFirmado.innerHTML : '';
 
-    // LOGICA VISIBILIDAD RECHAZO
     function toggleRechazo(value) {
         const container = document.getElementById('argumento-rechazo-container');
         const textarea = document.getElementById('argumento_rechazo');
@@ -226,7 +223,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 2. CHECK INICIAL (Para cuando carga un borrador con "No Publicable")
     const veredictoSeleccionado = document.querySelector('input[name="veredicto"]:checked');
     if (veredictoSeleccionado) {
         toggleRechazo(veredictoSeleccionado.value);
@@ -238,11 +234,9 @@ document.addEventListener('DOMContentLoaded', function() {
             this.disabled = true;
             this.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Guardando...`;
 
-            // Usamos FormData directamente del formulario existente
             const formData = new FormData(formEvaluacion);
-            formData.append('csrf_token', csrfToken); // Asegúrate de incluir el token CSRF
+            formData.append('csrf_token', csrfToken); 
             
-            // fetch espera que el backend maneje POST. Asegúrate que tu ruta acepte POST.
             fetch(`${baseUrl}revisorExtensos/guardarBorradorEvaluacion/${evaluacionId}`, {
                 method: 'POST',
                 body: formData
@@ -250,10 +244,8 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(res => res.json())
             .then(data => {
                 const alertClass = data.error ? 'alert-danger' : 'alert-success';
-                // Usamos mensajeDiv que definimos arriba
                 mensajeDiv.innerHTML = `<div class="alert ${alertClass}">${data.mensaje || data.error}</div>`;
                 
-                // Hacemos scroll hacia arriba para ver el mensaje
                 mensajeDiv.scrollIntoView({ behavior: 'smooth' });
 
                 setTimeout(() => { mensajeDiv.innerHTML = ''; }, 3000);
@@ -277,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Procesando...`;
 
             const formData = new FormData(this);
-            formData.append('csrf_token', csrfToken); // Generalmente ya va incluido si está en el input hidden
+            formData.append('csrf_token', csrfToken); 
 
             fetch(`${baseUrl}revisorExtensos/procesarEvaluacion/${evaluacionId}`, {
                 method: 'POST',
@@ -299,7 +291,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <i class="bi bi-download"></i> Descargar PDF para Firmar
                                 </a>
                             </div>`;
-                        // Bloquear formulario
                         formEvaluacion.querySelectorAll('input, textarea, button').forEach(el => el.disabled = true);
                         seccionSubirFirmado.classList.remove('d-none');
                         seccionSubirFirmado.scrollIntoView({ behavior: 'smooth' });
@@ -326,7 +317,6 @@ document.addEventListener('DOMContentLoaded', function() {
             btnSubirFirmado.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Subiendo...`;
 
             const formData = new FormData(this);
-            // CORRECCIÓN CRUCIAL: Agregar CSRF Token manualmente porque este form no lo tiene en HTML
             formData.append('csrf_token', csrfToken);
 
             fetch(`${baseUrl}revisorExtensos/subirPdfFirmado/${evaluacionId}`, {
