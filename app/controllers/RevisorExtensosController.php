@@ -138,6 +138,9 @@ class RevisorExtensosController {
         if (Usuario::perfilRevisorEstaCompleto($_SESSION['usuario_id'])) {
             redirect('revisorExtensos/dashboard');
         }
+        // Cargar datos necesarios para la vista
+        $areas = AreaTematica::obtenerTodas();
+        $usuario = Usuario::buscarPorId($_SESSION['usuario_id']);
         CSRFHelper::generateToken();
         require_once BACKEND_ROOT . '/app/views/layout/header.php';
         require_once BACKEND_ROOT . '/app/views/revisor_extensos/completar_perfil.php';
@@ -150,11 +153,22 @@ class RevisorExtensosController {
             http_response_code(403); echo json_encode(['error' => 'Permisos insuficientes.']); return;
         }
         
-        $campos_requeridos = ['grado_academico', 'afiliacion_institucional', 'cargo_actual', 'area_especialidad'];
+        $campos_requeridos = ['grado_academico', 'afiliacion_institucional', 'cargo_actual', 'area_especialidad', 'area_id'];
         foreach ($campos_requeridos as $campo) {
             if (empty($_POST[$campo])) {
                 http_response_code(400); echo json_encode(['error' => 'Todos los campos son obligatorios.']); return;
             }
+        }
+
+        // Validar que el usuario aceptó los términos
+        if (!isset($_POST['acepta_terminos'])) {
+            http_response_code(400); echo json_encode(['error' => 'Debes aceptar los términos y políticas.']); return;
+        }
+
+        // Validar area_id existe en la tabla areas_tematicas
+        $area_id = $_POST['area_id'] ?? null;
+        if (!ctype_digit((string)$area_id) || !AreaTematica::buscarPorId((int)$area_id)) {
+            http_response_code(400); echo json_encode(['error' => 'Área temática inválida.']); return;
         }
         
         $comprobante_sni_ruta = null;
@@ -162,15 +176,17 @@ class RevisorExtensosController {
         $directorio_revisores = BACKEND_ROOT . '/uploads/revisores_perfil/';
         if (!is_dir($directorio_revisores)) { mkdir($directorio_revisores, 0777, true); }
 
-        if (isset($_FILES['comprobante_sni']) && $_FILES['comprobante_sni']['error'] === UPLOAD_ERR_OK) {
-            $archivo_sni = $_FILES['comprobante_sni'];
-            if ($archivo_sni['type'] !== 'application/pdf') {
-                http_response_code(400); echo json_encode(['error' => 'El comprobante SNI debe ser un archivo PDF.']); return;
-            }
-            $extension = pathinfo($archivo_sni['name'], PATHINFO_EXTENSION);
-            $comprobante_sni_ruta = 'sni_' . $_SESSION['usuario_id'] . '_' . time() . '.' . $extension;
-            move_uploaded_file($archivo_sni['tmp_name'], $directorio_revisores . $comprobante_sni_ruta);
+        // Comprobante SNI es obligatorio ahora
+        if (!isset($_FILES['comprobante_sni']) || $_FILES['comprobante_sni']['error'] !== UPLOAD_ERR_OK) {
+            http_response_code(400); echo json_encode(['error' => 'El comprobante SNI es obligatorio.']); return;
         }
+        $archivo_sni = $_FILES['comprobante_sni'];
+        if ($archivo_sni['type'] !== 'application/pdf') {
+            http_response_code(400); echo json_encode(['error' => 'El comprobante SNI debe ser un archivo PDF.']); return;
+        }
+        $extension = pathinfo($archivo_sni['name'], PATHINFO_EXTENSION);
+        $comprobante_sni_ruta = 'sni_' . $_SESSION['usuario_id'] . '_' . time() . '.' . $extension;
+        move_uploaded_file($archivo_sni['tmp_name'], $directorio_revisores . $comprobante_sni_ruta);
 
         if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
             $archivo_foto = $_FILES['foto'];
@@ -189,13 +205,16 @@ class RevisorExtensosController {
             'afiliacion_institucional'  => $_POST['afiliacion_institucional'],
             'cargo_actual'              => $_POST['cargo_actual'],
             'area_especialidad'         => $_POST['area_especialidad'],
+            'acepta_terminos'          => 1,
             'orcid'                     => $_POST['orcid'] ?? null,
             'google_scholar_id'         => $_POST['google_scholar_id'] ?? null,
             'comprobante_sni_ruta'      => $comprobante_sni_ruta,
             'foto_ruta'                 => $foto_ruta
         ];
         
-        if (Usuario::guardarPerfilRevisorExtenso($datos, $_POST['area_id'])) {
+        if (Usuario::guardarPerfilRevisorExtenso($datos, (int)$area_id)) {
+                // Actualizamos la sesión para reflejar la nueva área si está en uso
+                $_SESSION['area_id'] = (int)$area_id;
                 echo json_encode(['mensaje' => 'Perfil completado con éxito. ¡Gracias por tu colaboración!']);
         } else {
             http_response_code(500);

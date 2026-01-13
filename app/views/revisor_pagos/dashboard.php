@@ -64,7 +64,7 @@
                     <?php foreach ($pagosHistorial as $pago): ?>
                         <tr>
                             <td><?php echo htmlspecialchars($pago['nombre_completo']); ?></td>
-                            <td><?php echo date('d/m/Y H:i', strtotime($pago['fecha_carga'])); ?></td>
+                            <td><?php echo (!empty($pago['fecha_carga']) && strtotime($pago['fecha_carga']) !== false) ? date('d/m/Y H:i', strtotime($pago['fecha_carga'])) : 'N/D'; ?></td>
                             <td><?php echo htmlspecialchars($pago['roles']); ?></td>
                             <td>$<?php echo number_format($pago['monto'], 2); ?> MXN</td>
                           <!--  <td><?php /* echo htmlspecialchars($pago['tipo_pago']); */ ?></td> -->
@@ -75,7 +75,7 @@
                                 ?>
                                 <span class="badge <?php echo $badge_class; ?>"><?php echo $estatus; ?></span>
                             </td>
-                            <td><?php echo date('d/m/Y H:i', strtotime($pago['fecha_revision_pago'])); ?></td>
+                            <td><?php echo (!empty($pago['fecha_revision_pago']) && strtotime($pago['fecha_revision_pago']) !== false) ? date('d/m/Y H:i', strtotime($pago['fecha_revision_pago'])) : 'N/D'; ?></td>
                             <td><?php echo htmlspecialchars($pago['revisor_nombre'] ?? 'Sistema'); ?></td>
                         </tr>
                     <?php endforeach; ?>

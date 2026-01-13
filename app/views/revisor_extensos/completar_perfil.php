@@ -26,7 +26,7 @@
                             <select class="form-select" id="area_id" name="area_id" required>
                                 <option value="">-- Selecciona tu área principal de revisión --</option>
                                 <?php foreach ($areas as $area): ?>
-                                    <option value="<?php echo $area['id']; ?>">
+                                    <option value="<?php echo $area['id']; ?>" <?php echo (isset($usuario['area_id']) && $usuario['area_id'] == $area['id']) ? 'selected' : ''; ?> >
                                         <?php echo htmlspecialchars($area['nombre_area']); ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -41,12 +41,12 @@
                             <input type="text" class="form-control" id="orcid" name="orcid">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="google_scholar_id" class="form-label">Google Scholar / Scopus ID (Opcional)</label>
+                            <label for="google_scholar_id" class="form-label" >Google Scholar / Scopus ID </label>
                             <input type="text" class="form-control" id="google_scholar_id" name="google_scholar_id">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="comprobante_sni" class="form-label">Comprobante SNI (PDF, opcional)</label>
-                            <input class="form-control" type="file" id="comprobante_sni" name="comprobante_sni" accept=".pdf">
+                            <label for="comprobante_sni" class="form-label">Comprobante SNI </label>
+                            <input class="form-control" type="file" id="comprobante_sni" name="comprobante_sni" accept=".pdf" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="foto" class="form-label">Fotografía (JPG/PNG, opcional)</label>
@@ -78,6 +78,12 @@
 
     perfilForm.addEventListener('submit', function(event) {
         event.preventDefault();
+        // Validación cliente: asegurar que se seleccionó Área Temática
+        const areaSelect = document.getElementById('area_id');
+        if (!areaSelect || !areaSelect.value) {
+            mensajeDiv.innerHTML = `<div class="alert alert-danger">Selecciona tu Área Temática de Especialización.</div>`;
+            return;
+        }
         submitBtn.disabled = true;
         submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Guardando...`;
         

@@ -47,7 +47,7 @@ public function dashboard() {
 }
 
     /**
-     * (API) Procesa la aprobación o rechazo de un pago y notifica al usuario.
+     *  Procesa la aprobación o rechazo de un pago y notifica al usuario.
      */
     public function procesarPago() {
         header('Content-Type: application/json');

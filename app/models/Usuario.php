@@ -283,7 +283,7 @@ public static function buscarRevisorDisponiblePorArea(int $area_id) {
             $sql_perfil = "INSERT INTO revisores_extensos_perfil 
                                 (usuario_id, grado_academico, afiliacion_institucional, cargo_actual, area_especialidad, orcid, google_scholar_id, comprobante_sni_ruta, foto_ruta, acepta_terminos)
                             VALUES
-                                (:usuario_id, :grado_academico, :afiliacion_institucional, :cargo_actual, :area_especialidad, :orcid, :google_scholar_id, :comprobante_sni_ruta, :foto_ruta, 1)
+                                (:usuario_id, :grado_academico, :afiliacion_institucional, :cargo_actual, :area_especialidad, :orcid, :google_scholar_id, :comprobante_sni_ruta, :foto_ruta, :acepta_terminos)
                             ON DUPLICATE KEY UPDATE
                                 grado_academico = VALUES(grado_academico),
                                 afiliacion_institucional = VALUES(afiliacion_institucional),
@@ -291,7 +291,7 @@ public static function buscarRevisorDisponiblePorArea(int $area_id) {
                                 area_especialidad = VALUES(area_especialidad),
                                 orcid = VALUES(orcid),
                                 google_scholar_id = VALUES(google_scholar_id),
-¿                                comprobante_sni_ruta = COALESCE(VALUES(comprobante_sni_ruta), comprobante_sni_ruta),
+                                comprobante_sni_ruta = COALESCE(VALUES(comprobante_sni_ruta), comprobante_sni_ruta),
                                 foto_ruta = COALESCE(VALUES(foto_ruta), foto_ruta),
                                 acepta_terminos = VALUES(acepta_terminos)";
             
@@ -329,7 +329,7 @@ public static function buscarRevisorDisponiblePorArea(int $area_id) {
  * @param int $usuario_id El ID del usuario.
  * @return bool True si el perfil está completo.
  */
-public static function perfilRevisorEstaCompleto(int $usuario_id): bool {
+    public static function perfilRevisorEstaCompleto(int $usuario_id): bool {
     $pdo = Database::conectar();
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM revisores_extensos_perfil WHERE usuario_id = :usuario_id AND acepta_terminos = 1");
     $stmt->execute(['usuario_id' => $usuario_id]);
