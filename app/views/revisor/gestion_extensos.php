@@ -402,6 +402,8 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(err => console.error(err));
     }
+
+});
     function prepararModal(boton) {
     var form = document.getElementById('asignarForm');
     
@@ -417,6 +419,4 @@ document.addEventListener('DOMContentLoaded', function() {
         modalTitle.textContent = 'Asignar Revisores a: ' + tituloExtenso;
     }
 }
-});
-
 </script>
