@@ -272,7 +272,6 @@ public function actualizarAreaResumen($id) {
  */
 public function pagos() {
     if (!$this->autorizar(['Administrador', 'Revisor de Pagos'])) return;
-    // Generar token CSRF para el formulario de exportación
     CSRFHelper::generateToken();
 
     $todosLosPagos = Pago::obtenerTodosConDetalles();
@@ -435,7 +434,6 @@ public function condonarPago() {
     if (Pago::condonarPago($pagoId, $revisorId)) {
         $estadisticasActuales = Pago::obtenerEstadisticas();
 
-        // Enviar correo al usuario notificando la condonación (si se encontró correo)
         if ($usuario && !empty($usuario['correo'])) {
             $asunto = "Notificación de condonación de pago - CCTI 2025";
             $montoAntes = isset($pagoAntes['monto']) ? number_format($pagoAntes['monto'], 2) : '0.00';
@@ -517,7 +515,6 @@ public function exportarPagos() {
         $comprobante = $pago['comprobante_ruta'] ?? '';
         if (empty($comprobante)) $comprobante = 'N/A';
 
-        // Resumen ID (solo el id, sin URL)
         $resumenId = $pago['resumen_id'] ?? '';
 
         fputcsv($output, [
@@ -541,7 +538,6 @@ public function exportarPagos() {
 public function exportarAutoresParaMemorias() {
     if (!$this->autorizar()) return;
 
-    // 1. Obtener los datos (ahora incluyen 'autor_correo')
     $resumenes = Resumen::obtenerDatosPorMemorias(); 
 
     $datosCSV = [];
@@ -575,25 +571,19 @@ public function exportarAutoresParaMemorias() {
         }
     }
 
-    // Prefer UTF-8 output with BOM so Excel in Windows recognizes accents correctly
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename=reporte_autores_trabajos_' . date('Y-m-d') . '.csv');
-    // try to set locale for correct formatting (optional, may not be available on all systems)
     @setlocale(LC_ALL, 'es_MX.UTF-8', 'es_ES.UTF-8', 'es.UTF-8');
 
     $output = fopen('php://output', 'w');
-    // write UTF-8 BOM for Excel compatibility
     fwrite($output, "\xEF\xBB\xBF");
 
     $header = ['Autor/Coautor', 'Correo (Autor Principal)', 'Título del Trabajo', 'Adscripción 1', 'Adscripción 2', 'Tipo de Trabajo', 'Autor Principal'];
     fputcsv($output, $header);
 
-    // helper to ensure UTF-8 encoding
     $toUtf8 = function($v) {
         if ($v === null) return '';
-        // normalize to string
         $s = (string)$v;
-        // if not UTF-8, convert from probable encodings
         if (!mb_check_encoding($s, 'UTF-8')) {
             $s = mb_convert_encoding($s, 'UTF-8', 'ISO-8859-1');
         }
@@ -624,7 +614,6 @@ public function reportes() {
 
     CSRFHelper::generateToken();
 
-    // Obtener áreas para los filtros
     $areas = AreaTematica::obtenerTodas();
 
     require_once BACKEND_ROOT . '/app/views/layout/header.php';
@@ -642,16 +631,13 @@ public function estadisticasReportes() {
     $from = $_GET['from'] ?? null;
     $to = $_GET['to'] ?? null;
 
-    // Si no hay rango, tomar últimos 6 meses
     if (!$to) $to = date('Y-m-d');
     if (!$from) $from = date('Y-m-d', strtotime('-5 months', strtotime($to)));
 
     $pdo = Database::conectar();
 
-    // KPIs (reusar método existente cuando sea posible)
     $stats = Pago::obtenerEstadisticas();
 
-    // Ingresos por mes (agrupado por YYYY-MM)
     $sql = "SELECT DATE_FORMAT(fecha_revision_pago, '%Y-%m') as mes, COALESCE(SUM(monto),0) as total
             FROM pagos
             WHERE estatus_pago = 'Aprobado' AND fecha_revision_pago BETWEEN :from AND :to
@@ -661,7 +647,6 @@ public function estadisticasReportes() {
     $stmt->execute(['from' => $from . ' 00:00:00', 'to' => $to . ' 23:59:59']);
     $ingresosPorMes = $stmt->fetchAll();
 
-    // Pagos por tipo (en el rango)
     $sql2 = "SELECT tipo_pago, COUNT(*) as cantidad, COALESCE(SUM(monto),0) as total FROM pagos
              WHERE fecha_revision_pago BETWEEN :from AND :to
              GROUP BY tipo_pago";
@@ -701,12 +686,9 @@ public function listarPagosReportes() {
 
         $pdo = Database::conectar();
 
-    // Base WHERE
     $where = "WHERE 1=1";
     $params = [];
     if ($from) {
-        // include payments where fecha_revision_pago is within range
-        // or, if fecha_revision_pago is NULL, fall back to fecha_carga
         $where .= " AND ((p.fecha_revision_pago IS NOT NULL AND p.fecha_revision_pago >= :from) OR (p.fecha_revision_pago IS NULL AND p.fecha_carga >= :from))";
         $params['from'] = $from . ' 00:00:00';
     }
@@ -720,7 +702,6 @@ public function listarPagosReportes() {
     }
     if (!empty($request['participant_type'])) {
         $participant = $request['participant_type'];
-        // role-based types use an EXISTS subquery, amount-based types use monto
         if (in_array($participant, ['Autor','Asistente con Cartel','Revisor','Revisor de Pagos'])) {
             $where .= " AND EXISTS (SELECT 1 FROM usuario_roles ur2 JOIN roles rl2 ON ur2.rol_id = rl2.id WHERE ur2.usuario_id = u.id AND rl2.nombre_rol = :participant_role)";
             $params['participant_role'] = $participant;
@@ -735,17 +716,14 @@ public function listarPagosReportes() {
         $params['q'] = '%' . mb_strtolower($search) . '%';
     }
 
-    // total records (without filters)
     $totalSql = "SELECT COUNT(*) FROM pagos p";
     $total = $pdo->query($totalSql)->fetchColumn();
 
-    // filtered count
     $countSql = "SELECT COUNT(DISTINCT p.id) FROM pagos p JOIN usuarios u ON p.usuario_id = u.id LEFT JOIN resumenes res ON p.resumen_id = res.id LEFT JOIN usuario_roles ur ON u.id = ur.usuario_id JOIN roles r ON ur.rol_id = r.id " . $where;
         $stmtCount = $pdo->prepare($countSql);
         $stmtCount->execute($params);
         $recordsFiltered = (int)$stmtCount->fetchColumn();
 
-    // fetch data
     $dataSql = "SELECT p.id, p.resumen_id, p.usuario_id, u.nombre_completo, u.institucion_procedencia, GROUP_CONCAT(r.nombre_rol SEPARATOR ', ') as roles, p.tipo_pago, p.monto, p.estatus_pago, p.comprobante_ruta, p.fecha_revision_pago
                 FROM pagos p
                 JOIN usuarios u ON p.usuario_id = u.id
@@ -757,7 +735,6 @@ public function listarPagosReportes() {
                 ORDER BY p.id DESC
                 LIMIT :start, :length";
 
-    // bind start/length as integers separately
         $stmt = $pdo->prepare($dataSql);
         foreach ($params as $k => $v) {
             $stmt->bindValue(':' . $k, $v);
@@ -767,7 +744,6 @@ public function listarPagosReportes() {
         $stmt->execute();
         $rows = $stmt->fetchAll();
 
-    // compute tipo de participante server-side and format rows for DataTables
     $data = [];
     foreach ($rows as $r) {
         $rolesStr = $r['roles'] ?? '';
@@ -809,7 +785,6 @@ public function listarPagosReportes() {
         ]);
     } catch (\Throwable $ex) {
         http_response_code(500);
-        // send a JSON error so DataTables can show it (and avoid HTML/redirect responses)
         echo json_encode(['error' => 'Server error: ' . $ex->getMessage()]);
     }
 }
@@ -851,7 +826,6 @@ public function exportarPagosReportes() {
     fputcsv($output, ['ID Pago','Resumen ID','ID Usuario','Nombre Usuario','Institución','Tipo Pago','Tipo Participante','Monto','Estatus','Comprobante','Fecha Revision']);
 
     foreach ($rows as $r) {
-        // determinar tipo participante
         $rolesStr = $r['roles'] ?? '';
         $monto = $r['monto'];
         $tipoParticipante = '-';
@@ -885,4 +859,99 @@ public function exportarPagosReportes() {
     fclose($output);
     exit;
 }
+/**
+     * Envía credenciales masivas a todos los usuarios de un rol específico.
+     * Genera una nueva contraseña aleatoria para cada usuario, la actualiza en la BD y envía el correo.
+     */
+    public function enviarCredencialesMasivas() {
+        header('Content-Type: application/json');
+
+        if (!$this->autorizar()) return;
+
+        $datos = json_decode(file_get_contents('php://input'), true);
+        $rol_id = isset($datos['rol_id']) ? (int)$datos['rol_id'] : null;
+
+        if (!$rol_id) {
+            http_response_code(400);
+            echo json_encode(['error' => 'No se ha especificado un rol válido.']);
+            return;
+        }
+
+       
+        $usuarios = Usuario::obtenerPorRol($rol_id);
+
+        if (empty($usuarios)) {
+            http_response_code(404);
+            echo json_encode(['error' => 'No se encontraron usuarios con ese rol.']);
+            return;
+        }
+
+        $enviados = 0;
+        $errores = 0;
+        $linkLogin = 'https://ccti2025.fasbit.edu.mx/backend/public/usuario/login';
+
+        foreach ($usuarios as $usuario) {
+            $contrasenaTemporal = bin2hex(random_bytes(4)); 
+
+            if ($usuario->actualizarContrasena($contrasenaTemporal)) {
+                
+                $asunto = "Actualización de Credenciales - CCTI 2025";
+                
+                $mensajeRol = "";
+                
+                switch ($rol_id) {
+                    case 2: // Autores
+                        $mensajeRol = "<p>Como <strong>Autor</strong> registrado en el CCTI 2025, te enviamos tus accesos actualizados.</p>";
+                        break;
+                    case 3: // Revisor de Extenso
+                        $mensajeRol = "<p>Has sido confirmado como <strong>Revisor de Extensos</strong>. Agradecemos tu participación.</p>";
+                        break;
+                    case 5: // Coordinador de Área
+                        $mensajeRol = "<p>Te enviamos tus credenciales para acceder al panel de <strong>Coordinación</strong>.</p>";
+                        break;
+                    default:
+                        $mensajeRol = "<p>Se han generado nuevas credenciales para tu cuenta en el sistema Cortex.</p>";
+                        break;
+                }
+
+                $cuerpo = "
+                    <h1>¡Hola, {$usuario->nombre_completo}!</h1>
+                    {$mensajeRol}
+                    <p>Por favor, utiliza las siguientes credenciales para ingresar al sistema:</p>
+                    <ul>
+                        <li><strong>Usuario / Correo:</strong> {$usuario->correo}</li>
+                        <li><strong>Contraseña Temporal:</strong> {$contrasenaTemporal}</li>
+                    </ul>
+                    <p>⚠️ <em>Si ya tenías una contraseña, esta ha sido reemplazada por la nueva mostrada arriba.</em></p>
+                    <p>Accede al sistema aquí: <a href='{$linkLogin}' target='_blank'>Ingresar a Cortex</a></p>
+                    <hr>
+                    <small>Si no solicitaste este cambio o crees que es un error, contacta al administrador.</small>
+                ";
+
+                $enviado = MailHelper::enviarCorreo(
+                    $usuario->correo, 
+                    $usuario->nombre_completo, 
+                    $asunto, 
+                    $cuerpo
+                );
+
+                if ($enviado) {
+                    $enviados++;
+                } else {
+                    $errores++; 
+                }
+
+            } else {
+                $errores++; 
+            }
+        }
+
+        http_response_code(200);
+        echo json_encode([
+            'mensaje' => 'Proceso finalizado.',
+            'total_usuarios' => count($usuarios),
+            'enviados_exitosamente' => $enviados,
+            'fallidos' => $errores
+        ]);
+    }
 }

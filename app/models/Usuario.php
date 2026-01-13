@@ -387,4 +387,49 @@ public static function buscarPorRoles(array $nombresRoles): array {
     $stmt->execute($nombresRoles);
     return $stmt->fetchAll();
 }
+/**
+     * Obtiene todos los usuarios que tengan un rol específico.
+     * @param int $rol_id El ID del rol a filtrar.
+     * @return array Un array de objetos Usuario.
+     */
+    public static function obtenerPorRol(int $rol_id): array {
+        $pdo = Database::conectar();
+        // Hacemos JOIN con la tabla pivote usuario_roles para filtrar por el rol_id
+        $sql = "SELECT u.* FROM usuarios u 
+                JOIN usuario_roles ur ON u.id = ur.usuario_id 
+                WHERE ur.rol_id = :rol_id";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([':rol_id' => $rol_id]);
+        
+        // Devolvemos objetos de la clase Usuario directamente
+        return $stmt->fetchAll(PDO::FETCH_CLASS, 'Usuario');
+    }
+
+    /**
+     * Actualiza la contraseña de la instancia actual del usuario.
+     * @param string $nuevaContrasena La nueva contraseña en texto plano.
+     * @return bool True si la actualización fue exitosa.
+     */
+    public function actualizarContrasena(string $nuevaContrasena): bool {
+        if (!$this->id) {
+            return false; // No se puede actualizar sin un ID
+        }
+        
+        try {
+            $pdo = Database::conectar();
+            $hashedPassword = password_hash($nuevaContrasena, PASSWORD_BCRYPT);
+            
+            $sql = "UPDATE usuarios SET contrasena = :pass WHERE id = :id";
+            $stmt = $pdo->prepare($sql);
+            
+            return $stmt->execute([
+                ':pass' => $hashedPassword, 
+                ':id' => $this->id
+            ]);
+        } catch (PDOException $e) {
+            error_log("Error al actualizar contraseña: " . $e->getMessage());
+            return false;
+        }
+    }
 }

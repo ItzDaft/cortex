@@ -50,7 +50,46 @@
     <div class="modal-content">
       <div class="modal-header"><h5 class="modal-title">Enviar Correo Masivo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
+        <hr class="my-5" style="border-top: 2px dashed #bbb;">
+
+<div class="mt-4">
+    <h5 class="fw-bold text-danger"><i class="bi bi-key-fill"></i> Reenvío Masivo de Credenciales</h5>
+    
+    <div class="alert alert-warning d-flex align-items-center" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2 fs-4"></i>
+        <div>
+            <strong>¡Atención!</strong> Esta acción <b>cambiará la contraseña</b> de todos los usuarios del rol seleccionado y les enviará una nueva por correo electrónico. Esta acción no se puede deshacer.
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label for="rolDestinoCredenciales" class="form-label fw-bold">Seleccionar Grupo de Usuarios:</label>
+        <select id="rolDestinoCredenciales" class="form-select form-select-lg">
+            <option value="">-- Seleccione un Rol --</option>
+            <option value="2">Autores</option>
+            <option value="3">Revisores de Extenso</option>
+            <option value="4">Revisores de Pagos</option>
+            <option value="5">Coordinadores de Área</option>
+            <option value="6">Coordinador General</option>
+        </select>
+    </div>
+
+    <div class="d-grid gap-2">
+        <button type="button" id="btnEnviarCredenciales" class="btn btn-danger btn-lg">
+            <i class="bi bi-envelope-paper-fill"></i> Generar y Enviar Credenciales Nuevas
+        </button>
+    </div>
+
+    <div id="loadingCredenciales" class="text-center mt-3 d-none">
+        <div class="spinner-border text-danger" role="status">
+            <span class="visually-hidden">Procesando...</span>
+        </div>
+        <p class="mt-2 text-muted fw-bold">Procesando usuarios y enviando correos...<br><small>Por favor no cierre esta ventana.</small></p>
+    </div>
+</div>
         <form id="correoMasivoForm" enctype="multipart/form-data">
+            <!-- CSRF token hidden input (used by JS) -->
+            <input type="hidden" name="csrf_token" id="csrf_token_input" value="<?php echo $_SESSION['csrf_token'] ?? ''; ?>">
 
             <div class="mb-3 p-3 bg-light rounded">
                 <label class="form-label fw-bold">Paso 1: Seleccionar Destinatarios</label>
@@ -95,6 +134,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const plantillaSelect = document.getElementById('plantilla-select');
     const asuntoInput = document.getElementById('asunto');
     const cuerpoTextarea = document.getElementById('cuerpo');
+    const btnCredenciales = document.getElementById('btnEnviarCredenciales');
+    // Initialize CSRF token from hidden input if present
+    window.csrfToken = window.csrfToken || document.getElementById('csrf_token_input')?.value || '';
 
     const plantillas = {
         recordatorio_autores: {
@@ -154,5 +196,71 @@ document.addEventListener('DOMContentLoaded', function() {
             enviarBtn.innerHTML = originalBtnText;
         });
     });
+    if (btnCredenciales) {
+        // Use a single event listener (no inline onclick). Pass the event to the handler.
+        btnCredenciales.addEventListener('click', function(e) { enviarCredencialesMasivas(e); });
+    }
+    async function enviarCredencialesMasivas(event) {
+        const rolSelect = document.getElementById('rolDestinoCredenciales');
+        const rolId = rolSelect.value;
+        const loadingDiv = document.getElementById('loadingCredenciales');
+        const btnEnviar = event && event.target ? event.target : document.querySelector('#rolDestinoCredenciales + .d-grid .btn');
+
+        // 1. Validaciones
+        if (!rolId) {
+            alert("Por favor selecciona un rol de la lista.");
+            rolSelect.focus();
+            return;
+        }
+
+        const confirmacion = confirm(`⚠️ ADVERTENCIA DE SEGURIDAD ⚠️\n\nEstás a punto de CAMBIAR LA CONTRASEÑA de TODOS los usuarios del rol seleccionado.\n\nSe les enviará un correo con su nueva clave temporal.\n\n¿Estás realmente seguro de continuar?`);
+        
+        if (!confirmacion) return;
+
+        // 2. Interfaz de carga
+        if (btnEnviar) btnEnviar.disabled = true;
+        rolSelect.disabled = true;
+        loadingDiv.classList.remove('d-none'); // Mostrar spinner
+
+        try {
+            // 3. Petición al Servidor
+            const url = '<?php echo BASE_URL; ?>administrador/enviarCredencialesMasivas';
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ rol_id: rolId, csrf_token: window.csrfToken })
+            });
+
+            const data = await response.json();
+
+            // 4. Manejo de Respuesta
+            if (response.ok) {
+                let mensaje = `✅ Proceso Finalizado.\n\n`;
+                mensaje += `Total procesados: ${data.total_usuarios}\n`;
+                mensaje += `Correos enviados con éxito: ${data.enviados_exitosamente}\n`;
+                
+                if(data.fallidos > 0) {
+                    mensaje += `⚠️ Fallos: ${data.fallidos} (Revisa los logs del servidor)`;
+                }
+
+                alert(mensaje);
+            } else {
+                throw new Error(data.error || "Error desconocido en el servidor");
+            }
+
+        } catch (error) {
+            console.error("Error:", error);
+            alert("❌ Ocurrió un error al procesar la solicitud:\n" + (error.message || error));
+        } finally {
+            // 5. Restaurar Interfaz
+            if (btnEnviar) btnEnviar.disabled = false;
+            rolSelect.disabled = false;
+            rolSelect.value = ""; // Limpiar selección
+            loadingDiv.classList.add('d-none'); // Ocultar spinner
+        }
+    }
+
 });
 </script>
