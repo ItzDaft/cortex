@@ -81,7 +81,7 @@
                                         </a>
                                     </td>
                                     <td>
-                                        <button class="btn btn-sm btn-primary btn-asignar" data-extenso-id="<?php echo $extenso['id']; ?>" data-bs-toggle="modal" data-bs-target="#asignarModal">
+                                        <button class="btn btn-sm btn-primary btn-asignar" data-extenso-id="<?php echo $extenso['id']; ?>" data-bs-toggle="modal" data-bs-target="#asignarModal" data-id="<?php echo $extenso['id']; ?>" data-titulo="<?php echo htmlspecialchars($extenso['titulo']); ?>" onclick="prepararModal(this)">
                                             <i class="bi bi-person-plus-fill"></i> Asignar Revisores
                                         </button>
                                     </td>
@@ -200,12 +200,15 @@
             <div id="revisores-container" style="max-height: 300px; overflow-y: auto;">
                 <?php foreach ($revisoresDisponibles as $rev): ?>
                       <?php 
-                    $carga = $rev['carga_actual'];
-                    $full = ($carga >= 2); 
-                    $color = $full ? 'text-danger' : 'text-success';
+                            $carga = $rev['carga_actual'];
+                            $full = ($carga >= 2); 
+                            $color = $full ? 'text-danger' : 'text-success';
+                            
+                            $disabledAttr = $full ? 'disabled' : '';
+                            $opacityStyle = $full ? 'opacity: 0.6;' : '';
                     ?>
-                <div class="form-check py-1 border-bottom">
-                  <input class="form-check-input" type="checkbox" name="revisores_ids[]" value="<?php echo $rev['id']; ?>" id="rev-<?php echo $rev['id']; ?>">
+                <div class="form-check py-1 border-bottom" style="<?php echo $opacityStyle; ?>">
+                <input class="form-check-input" type="checkbox" name="revisores_ids[]" value="<?php echo $rev['id']; ?>" id="rev-<?php echo $rev['id']; ?>" <?php echo $disabledAttr; ?>>
                   <label class="form-check-label w-100" for="rev-<?php echo $rev['id']; ?>">
                     <strong><?php echo htmlspecialchars($rev['nombre_completo']); ?></strong>
                     <br><small class="<?php echo $color; ?>">Carga: <?php echo $carga; ?> / 2 <?php echo $full ? '(Lleno)' : ''; ?></small>
@@ -399,5 +402,21 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(err => console.error(err));
     }
+    function prepararModal(boton) {
+    var form = document.getElementById('asignarForm');
+    
+    form.reset();
+
+    var idExtenso = boton.getAttribute('data-id');
+    var tituloExtenso = boton.getAttribute('data-titulo');
+
+    document.getElementById('extenso_id_asignar').value = idExtenso;
+
+    var modalTitle = document.querySelector('#asignarModal .modal-title');
+    if (modalTitle) {
+        modalTitle.textContent = 'Asignar Revisores a: ' + tituloExtenso;
+    }
+}
 });
+
 </script>
