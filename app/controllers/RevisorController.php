@@ -489,4 +489,110 @@ class RevisorController {
         require_once BACKEND_ROOT . '/app/views/revisor/supervision_evaluaciones.php';
         require_once BACKEND_ROOT . '/app/views/layout/footer.php';
     }
+    /**
+     * Envía un correo de recordatorio al revisor sobre una evaluación pendiente.
+     * Módulo: Supervisión de Evaluaciones (Coordinador de Área).
+     */
+    public function enviarRecordatorio() {
+        header('Content-Type: application/json');
+        
+        if (method_exists($this, 'autorizar')) {
+            if (!$this->autorizar()) return;
+        } else {
+            if (!isset($_SESSION['usuario_id'])) {
+                http_response_code(401);
+                echo json_encode(['error' => 'No autorizado.']);
+                return;
+            }
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['error' => 'Método no permitido.']);
+            return;
+        }
+
+        $datos = json_decode(file_get_contents('php://input'), true);
+        $evaluacion_id = $datos['evaluacion_id'] ?? null;
+
+        if (!$evaluacion_id) {
+            http_response_code(400);
+            echo json_encode(['error' => 'ID de evaluación faltante.']);
+            return;
+        }
+
+  
+        $evaluacion = EvaluacionExtenso::buscarPorId($evaluacion_id);
+
+        if (!$evaluacion) {
+            http_response_code(404);
+            echo json_encode(['error' => 'La evaluación no existe.']);
+            return;
+        }
+
+    
+
+        if (empty($evaluacion['fecha_asignacion'])) {
+             http_response_code(400);
+             echo json_encode(['error' => 'Esta asignación no tiene fecha registrada. No se puede calcular el plazo.']);
+             return;
+        }
+
+        try {
+            $fechaAsignacion = new DateTime($evaluacion['fecha_asignacion']);
+            $fechaLimite = clone $fechaAsignacion;
+            $fechaLimite->modify('+15 days'); 
+            $hoy = new DateTime();
+            
+            $intervalo = $hoy->diff($fechaLimite);
+            $esVencido = ($hoy > $fechaLimite);
+            $dias = $intervalo->days;
+
+            $situacionTexto = "";
+            if ($esVencido) {
+                $situacionTexto = "<span style='color:red; font-weight:bold;'>VENCIDO por {$dias} días.</span>";
+            } elseif ($dias == 0) {
+                $situacionTexto = "<span style='color:orange; font-weight:bold;'>Vence HOY.</span>";
+            } else {
+                $situacionTexto = "Días restantes: <strong>{$dias}</strong>";
+            }
+
+            $destinatario = $evaluacion['correo_revisor']; // Dato traído en el Paso 1
+            $nombreRevisor = $evaluacion['nombre_revisor'];
+            $tituloArticulo = $evaluacion['titulo'];
+            
+            $asunto = "Recordatorio de Revisión Pendiente - CCTI 2025";
+            
+            $urlLogin = defined('BASE_URL') ? BASE_URL . 'usuario/login' : 'https://ccti2025.fasbit.edu.mx/backend/public/usuario/login';
+
+            $cuerpo = "
+                <div style='font-family: sans-serif; padding: 20px; color: #333;'>
+                    <h2 style='color: #d9534f;'>Recordatorio de Evaluación</h2>
+                    <p>Estimado(a) <strong>{$nombreRevisor}</strong>,</p>
+                    <p>Le recordamos cordialmente que tiene una evaluación pendiente en la plataforma Cortex.</p>
+                    
+                    <div style='background: #f4f4f4; padding: 15px; border-radius: 5px; margin: 20px 0;'>
+                        <p><strong>Artículo:</strong> {$tituloArticulo}</p>
+                        <p><strong>Fecha Asignación:</strong> " . $fechaAsignacion->format('d/m/Y') . "</p>
+                        <p><strong>Estado:</strong> {$situacionTexto}</p>
+                    </div>
+
+                    <p>Agradecemos su valioso apoyo para completar este proceso a tiempo.</p>
+                    
+                    <a href='{$urlLogin}' style='display:inline-block; padding:10px 20px; background-color:#0275d8; color:white; text-decoration:none; border-radius:5px;'>Acceder al Sistema</a>
+                </div>
+            ";
+
+            if (MailHelper::enviarCorreo($destinatario, $nombreRevisor, $asunto, $cuerpo)) {
+                echo json_encode(['mensaje' => 'Recordatorio enviado correctamente.']);
+            } else {
+                http_response_code(500);
+                echo json_encode(['error' => 'Fallo al enviar el correo (Error de servidor de correo).']);
+            }
+
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Error interno: ' . $e->getMessage()]);
+        }
+    }
 }

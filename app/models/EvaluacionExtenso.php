@@ -2,17 +2,17 @@
 
 class EvaluacionExtenso {
     
-    /**
+/**
      * Crea los registros iniciales de evaluación cuando se asignan revisores.
-     * MEJORA: Forzamos estatus y veredicto a 'Pendiente' para evitar valores por defecto incorrectos.
+     * MEJORA: Se registra la fecha_asignacion con NOW().
      */
     public static function asignarRevisores(int $extenso_version_id, array $revisores_ids): bool {
         $pdo = Database::conectar();
         try {
             $pdo->beginTransaction();
-            // AJUSTE CRÍTICO: Especificamos 'Pendiente' explícitamente
-            $sql = "INSERT INTO evaluaciones_extensos (extenso_version_id, revisor_id, estatus_evaluacion, veredicto) 
-                    VALUES (:extenso_version_id, :revisor_id, 'Pendiente', 'Pendiente')";
+            // CAMBIO: Agregamos fecha_asignacion
+            $sql = "INSERT INTO evaluaciones_extensos (extenso_version_id, revisor_id, estatus_evaluacion, veredicto, fecha_asignacion) 
+                    VALUES (:extenso_version_id, :revisor_id, 'Pendiente', 'Pendiente', NOW())";
             $stmt = $pdo->prepare($sql);
             foreach ($revisores_ids as $revisor_id) {
                 $stmt->execute([
@@ -135,11 +135,10 @@ class EvaluacionExtenso {
     /**
      * Asigna un único tercer revisor para desempate.
      */
-    public static function asignarTercerRevisor(int $extenso_version_id, int $revisor_id): bool {
+public static function asignarTercerRevisor(int $extenso_version_id, int $revisor_id): bool {
         $pdo = Database::conectar();
-        // AJUSTE: Forzamos 'Pendiente'
-        $sql = "INSERT INTO evaluaciones_extensos (extenso_version_id, revisor_id, estatus_evaluacion, veredicto) 
-                VALUES (:extenso_version_id, :revisor_id, 'Pendiente', 'Pendiente')";
+        $sql = "INSERT INTO evaluaciones_extensos (extenso_version_id, revisor_id, estatus_evaluacion, veredicto, fecha_asignacion) 
+                VALUES (:extenso_version_id, :revisor_id, 'Pendiente', 'Pendiente', NOW())";
         $stmt = $pdo->prepare($sql);
         return $stmt->execute([
             'extenso_version_id' => $extenso_version_id,
@@ -242,15 +241,14 @@ class EvaluacionExtenso {
     /**
      * Actualiza los revisores de una versión de extenso (borra los anteriores e inserta los nuevos).
      */
-    public static function actualizarRevisores(int $extenso_version_id, array $revisores_ids): bool {
+public static function actualizarRevisores(int $extenso_version_id, array $revisores_ids): bool {
         $pdo = Database::conectar();
         try {
             $pdo->beginTransaction();
             $stmt_delete = $pdo->prepare("DELETE FROM evaluaciones_extensos WHERE extenso_version_id = :id");
             $stmt_delete->execute(['id' => $extenso_version_id]);
 
-            // AJUSTE: Forzamos 'Pendiente' en los nuevos
-            $stmt_insert = $pdo->prepare("INSERT INTO evaluaciones_extensos (extenso_version_id, revisor_id, estatus_evaluacion, veredicto) VALUES (:version_id, :revisor_id, 'Pendiente', 'Pendiente')");
+            $stmt_insert = $pdo->prepare("INSERT INTO evaluaciones_extensos (extenso_version_id, revisor_id, estatus_evaluacion, veredicto, fecha_asignacion) VALUES (:version_id, :revisor_id, 'Pendiente', 'Pendiente', NOW())");
             foreach ($revisores_ids as $revisor_id) {
                 $stmt_insert->execute(['version_id' => $extenso_version_id, 'revisor_id' => (int)$revisor_id]);
             }
@@ -349,12 +347,14 @@ class EvaluacionExtenso {
     /**
      * Obtiene los detalles de todas las asignaciones de extensos en un área para supervisión.
      */
-    public static function obtenerDetallesDeAsignacionesPorArea(int $area_id): array {
+public static function obtenerDetallesDeAsignacionesPorArea(int $area_id): array {
         $pdo = Database::conectar();
         $sql = "SELECT 
                     ee.id as evaluacion_id,
+                    ee.fecha_asignacion,
                     r.titulo as titulo_articulo,
                     u.nombre_completo as nombre_revisor,
+                    u.correo as correo_revisor,
                     ee.estatus_evaluacion,
                     ee.veredicto,
                     ee.respuestas_formulario,

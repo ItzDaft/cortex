@@ -1,7 +1,6 @@
 <div class="container-fluid px-4 mt-4">
     <h2 class="mt-4">Supervisión de Evaluaciones</h2>
     <ol class="breadcrumb mb-4">
-        <!-- Ajuste: Redirige al dashboard del Revisor (Coordinador de Área) -->
         <li class="breadcrumb-item"><a href="<?php echo BASE_URL; ?>revisor/dashboard">Dashboard</a></li>
         <li class="breadcrumb-item active">Evaluaciones</li>
     </ol>
@@ -15,22 +14,82 @@
                 <table class="table table-hover align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th scope="col" style="width: 35%;">Artículo</th>
+                            <th scope="col" style="width: 30%;">Artículo</th>
                             <th scope="col" style="width: 20%;">Revisor</th>
-                            <th scope="col" style="width: 20%;">Estatus / Veredicto</th>
-                            <th scope="col" style="width: 25%;" class="text-center">Acciones</th>
+                            <th scope="col" style="width: 15%;">Fechas (Asig. / Límite)</th>
+                            <th scope="col" style="width: 15%;">Tiempo Restante</th>
+                            <th scope="col" style="width: 20%;">Estatus / Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="tabla-validar-evaluaciones">
                         <?php if (empty($asignacionesExtensos)): ?>
                             <tr>
-                                <td colspan="4" class="text-center text-muted py-4">
+                                <td colspan="5" class="text-center text-muted py-4">
                                     <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                                     No hay evaluaciones registradas en su área.
                                 </td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($asignacionesExtensos as $asig): ?>
+                                                                <?php 
+                                    // --- LÓGICA DE SEMÁFORO DE FECHAS ---
+                                    $fechaAsig = $asig['fecha_asignacion'] ?? null;
+                                    $textoFechas = '<span class="text-muted small">No asignado</span>';
+                                    $textoTiempo = '-';
+                                    $claseTiempo = '';
+                                    $mostrarCampana = false;
+
+                                    // Solo calculamos si hay fecha y no ha sido validada/firmada aun
+                                    $estatus = $asig['estatus_evaluacion'] ?? 'Pendiente';
+                                    $esPendiente = in_array($estatus, ['Pendiente', 'Pendiente de Firma', 'Pendiente de Validación']);
+
+                                    if ($fechaAsig && $esPendiente) {
+                                        try {
+                                            $fInicio = new DateTime($fechaAsig);
+                                            $fLimite = (clone $fInicio)->modify('+15 days');
+                                            $hoy = new DateTime();
+                                            
+                                            // Formato visual
+                                            $textoFechas = '<div style="font-size: 0.85rem;">
+                                                                <span class="text-muted"><i class="bi bi-calendar-event"></i> ' . $fInicio->format('d/m/Y') . '</span><br>
+                                                                <strong><i class="bi bi-flag-fill"></i> ' . $fLimite->format('d/m/Y') . '</strong>
+                                                            </div>';
+
+                                            // Calculo días
+                                            $diff = $hoy->diff($fLimite);
+                                            $dias = $diff->days;
+                                            $vencido = ($diff->invert === 1); // 1 si hoy > limite
+
+                                            if ($vencido) {
+                                                $textoTiempo = "Vencido hace {$dias} días";
+                                                $claseTiempo = 'text-danger fw-bold';
+                                                $mostrarCampana = true;
+                                            } else {
+                                                if ($dias == 0) {
+                                                    $textoTiempo = "Vence HOY";
+                                                    $claseTiempo = 'text-danger fw-bold';
+                                                    $mostrarCampana = true;
+                                                } elseif ($dias <= 3) {
+                                                    $textoTiempo = "Quedan {$dias} días";
+                                                    $claseTiempo = 'text-danger fw-bold'; // Rojo: Urgente
+                                                    $mostrarCampana = true;
+                                                } elseif ($dias <= 7) {
+                                                    $textoTiempo = "Quedan {$dias} días";
+                                                    $claseTiempo = 'text-warning text-dark fw-bold'; // Amarillo: Precaución
+                                                    $mostrarCampana = true;
+                                                } else {
+                                                    $textoTiempo = "Quedan {$dias} días";
+                                                    $claseTiempo = 'text-success'; // Verde: A tiempo
+                                                    $mostrarCampana = false; // Opcional: Ocultar si falta mucho
+                                                }
+                                            }
+                                        } catch (Exception $e) {
+                                            $textoTiempo = "Error fecha";
+                                        }
+                                    } elseif (!$esPendiente) {
+                                        $textoTiempo = '<span class="text-muted"><i class="bi bi-check-all"></i> Completado</span>';
+                                    }
+                                ?>
                                 <tr id="eval-row-<?php echo $asig['evaluacion_id']; ?>">
                                     <!-- 1. Título y Enlace al Extenso -->
                                     <td>
@@ -76,6 +135,14 @@
                                     <!-- 4. Acciones (Íconos) -->
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
+                                            <?php if ($mostrarCampana): ?>
+                                                <button type="button" class="btn btn-warning btn-sm text-dark btn-recordatorio"
+                                                    data-id="<?php echo $asig['evaluacion_id']; ?>"
+                                                    data-revisor="<?php echo htmlspecialchars($asig['nombre_revisor']); ?>"
+                                                    title="Enviar recordatorio por correo">
+                                                    <i class="bi bi-bell-fill"></i>
+                                                </button>
+                                            <?php endif; ?>
                                             
                                             <!-- Ver Respuestas del Formulario (Modal) -->
                                             <?php if (!empty($asig['respuestas_formulario'])): ?>
@@ -224,6 +291,25 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(err => console.error(err));
     }
+    document.querySelectorAll('.btn-recordatorio').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const revisor = this.dataset.revisor;
+            
+            // Confirmación UX
+            if(confirm(`¿Desea enviar un correo de recordatorio a ${revisor}?\n\nEl sistema calculará los días restantes y enviará el aviso automáticamente.`)) {
+                // Deshabilitar botón temporalmente para evitar doble click
+                this.disabled = true;
+                this.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+                
+                apiCall('revisor/enviarRecordatorio', { evaluacion_id: id }, () => {
+                    // Restaurar botón tras éxito
+                    this.disabled = false;
+                    this.innerHTML = '<i class="bi bi-bell-fill"></i>';
+                });
+            }
+        });
+    });
 
     // 1. Lógica Modal Detalle
     const modalDetalle = document.getElementById('modalDetalleEvaluacion');
