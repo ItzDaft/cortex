@@ -1,9 +1,11 @@
 <div class="container-fluid px-4 mt-4">
-    <h2 class="mt-4">Supervisión de Evaluaciones</h2>
+    <h2 class="mt-4">Evaluaciones de extenso</h2>
     <ol class="breadcrumb mb-4">
         <li class="breadcrumb-item"><a href="<?php echo BASE_URL; ?>revisor/dashboard">Dashboard</a></li>
         <li class="breadcrumb-item active">Evaluaciones</li>
     </ol>
+
+    <?php CSRFHelper::getTokenInput(); ?>
 
     <div class="card mb-5 shadow-sm">
         <div class="card-header bg-primary text-white">
@@ -61,9 +63,15 @@
                                                             <div class="fw-bold text-dark"><i class="bi bi-flag-fill me-1"></i>Lim: ' . $fLimite->format('d/m/Y') . '</div>
                                                            </div>';
 
-                                            // Calcular diferencia correcta: límite - hoy
+                                            // Calcular diferencia correcta
                                             $diff = $fLimite->diff($hoy);
-                                            $dias = (int)$diff->format('%R%a'); // %R da signo, %a da días
+                                            // invert = 1 significa que $fLimite < $hoy (ya pasó)
+                                            // invert = 0 significa que $fLimite > $hoy (aún quedan días)
+                                            $dias = (int)$diff->days;
+                                            if ($diff->invert === 1) {
+                                                // Vencido (hoy es después del límite)
+                                                $dias = -$dias;
+                                            }
 
                                             // Si dias es negativo, está vencido
                                             if ($dias < 0) {
@@ -267,9 +275,11 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const baseUrl = '<?php echo BASE_URL; ?>';
-    const csrfToken = '<?php echo $_SESSION["csrf_token"] ?? ""; ?>';
+    // Obtener el token CSRF del input HTML generado por CSRFHelper::getTokenInput()
+    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
 
     function apiCall(url, data, onSuccess) {
+        // Añadir el token CSRF a cada petición
         data.csrf_token = csrfToken;
         fetch(`${baseUrl}${url}`, {
             method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
