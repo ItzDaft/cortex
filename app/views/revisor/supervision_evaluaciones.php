@@ -1,5 +1,5 @@
 <div class="container-fluid px-4 mt-4">
-    <h2 class="mt-4">Supervisión de Evaluaciones</h2>
+    <h2 class="mt-4">Evaluacion de extensosgit</h2>
     <ol class="breadcrumb mb-4">
         <li class="breadcrumb-item"><a href="<?php echo BASE_URL; ?>revisor/dashboard">Dashboard</a></li>
         <li class="breadcrumb-item active">Evaluaciones</li>
@@ -22,180 +22,156 @@
                         </tr>
                     </thead>
                     <tbody id="tabla-validar-evaluaciones">
-                        <?php if (empty($asignacionesExtensos)): ?>
-                            <tr>
-                                <td colspan="5" class="text-center text-muted py-4">
-                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                                    No hay evaluaciones registradas en su área.
-                                </td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($asignacionesExtensos as $asig): ?>
-                                                                <?php 
-                                    // --- LÓGICA DE SEMÁFORO DE FECHAS ---
-                                    $fechaAsig = $asig['fecha_asignacion'] ?? null;
-                                    $textoFechas = '<span class="text-muted small">No asignado</span>';
-                                    $textoTiempo = '-';
-                                    $claseTiempo = '';
-                                    $mostrarCampana = false;
+    <?php if (empty($asignacionesExtensos)): ?>
+        <tr>
+            <td colspan="5" class="text-center text-muted py-4">
+                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                No hay evaluaciones registradas en su área.
+            </td>
+        </tr>
+    <?php else: ?>
+        <?php foreach ($asignacionesExtensos as $asig): ?>
+            <?php 
+                // --- LÓGICA DE SEMÁFORO (Tu lógica actual, intacta) ---
+                $fechaAsig = $asig['fecha_asignacion'] ?? null;
+                $textoFechas = '<span class="text-muted small">No asignado</span>';
+                $textoTiempo = '-';
+                $claseTiempo = '';
+                $mostrarCampana = false;
 
-                                    // Solo calculamos si hay fecha y no ha sido validada/firmada aun
-                                    $estatus = $asig['estatus_evaluacion'] ?? 'Pendiente';
-                                    $esPendiente = in_array($estatus, ['Pendiente', 'Pendiente de Firma', 'Pendiente de Validación']);
+                $estatus = $asig['estatus_evaluacion'] ?? 'Pendiente';
+                $esPendiente = in_array($estatus, ['Pendiente', 'Pendiente de Firma', 'Pendiente de Validación']);
 
-                                    if ($fechaAsig && $esPendiente) {
-                                        try {
-                                            $fInicio = new DateTime($fechaAsig);
-                                            $fLimite = (clone $fInicio)->modify('+15 days');
-                                            $hoy = new DateTime();
-                                            
-                                            // Formato visual
-                                            $textoFechas = '<div style="font-size: 0.85rem;">
-                                                                <span class="text-muted"><i class="bi bi-calendar-event"></i> ' . $fInicio->format('d/m/Y') . '</span><br>
-                                                                <strong><i class="bi bi-flag-fill"></i> ' . $fLimite->format('d/m/Y') . '</strong>
-                                                            </div>';
+                if ($fechaAsig && $esPendiente) {
+                    try {
+                        $fInicio = new DateTime($fechaAsig);
+                        $fLimite = (clone $fInicio)->modify('+15 days');
+                        $hoy = new DateTime();
+                        
+                        $textoFechas = '<div style="font-size: 0.85rem;">
+                                            <span class="text-muted"><i class="bi bi-calendar-event"></i> ' . $fInicio->format('d/m/Y') . '</span><br>
+                                            <strong><i class="bi bi-flag-fill"></i> ' . $fLimite->format('d/m/Y') . '</strong>
+                                        </div>';
 
-                                            // Calculo días
-                                            $diff = $hoy->diff($fLimite);
-                                            $dias = $diff->days;
-                                            $vencido = ($diff->invert === 1); // 1 si hoy > limite
+                        $diff = $hoy->diff($fLimite);
+                        $dias = $diff->days;
+                        $vencido = ($diff->invert === 1);
 
-                                            if ($vencido) {
-                                                $textoTiempo = "Vencido hace {$dias} días";
-                                                $claseTiempo = 'text-danger fw-bold';
-                                                $mostrarCampana = true;
-                                            } else {
-                                                if ($dias == 0) {
-                                                    $textoTiempo = "Vence HOY";
-                                                    $claseTiempo = 'text-danger fw-bold';
-                                                    $mostrarCampana = true;
-                                                } elseif ($dias <= 3) {
-                                                    $textoTiempo = "Quedan {$dias} días";
-                                                    $claseTiempo = 'text-danger fw-bold'; // Rojo: Urgente
-                                                    $mostrarCampana = true;
-                                                } elseif ($dias <= 7) {
-                                                    $textoTiempo = "Quedan {$dias} días";
-                                                    $claseTiempo = 'text-warning text-dark fw-bold'; // Amarillo: Precaución
-                                                    $mostrarCampana = true;
-                                                } else {
-                                                    $textoTiempo = "Quedan {$dias} días";
-                                                    $claseTiempo = 'text-success'; // Verde: A tiempo
-                                                    $mostrarCampana = false; // Opcional: Ocultar si falta mucho
-                                                }
-                                            }
-                                        } catch (Exception $e) {
-                                            $textoTiempo = "Error fecha";
-                                        }
-                                    } elseif (!$esPendiente) {
-                                        $textoTiempo = '<span class="text-muted"><i class="bi bi-check-all"></i> Completado</span>';
-                                    }
-                                ?>
-                                <tr id="eval-row-<?php echo $asig['evaluacion_id']; ?>">
-                                    <!-- 1. Título y Enlace al Extenso -->
-                                    <td>
-                                        <div class="fw-bold text-primary mb-1">
-                                            <?php echo htmlspecialchars($asig['titulo_articulo']); ?>
-                                        </div>
-                                        <!-- CORRECCIÓN 1: Ruta estandarizada para ver extensos -->
-                                        <?php if (!empty($asig['archivo_extenso_ruta'])): ?>
-                                            <a href="<?php echo BASE_URL; ?>archivo/ver/extensos/<?php echo $asig['archivo_extenso_ruta']; ?>" target="_blank" class="text-decoration-none text-secondary" style="font-size: 0.85rem;">
-                                                <i class="bi bi-file-earmark-text me-1"></i>Ver Extenso Original
-                                            </a>
-                                        <?php endif; ?>
-                                    </td>
+                        if ($vencido) {
+                            $textoTiempo = "Vencido hace {$dias} días";
+                            $claseTiempo = 'text-danger fw-bold';
+                            $mostrarCampana = true;
+                        } else {
+                            if ($dias == 0) {
+                                $textoTiempo = "Vence HOY";
+                                $claseTiempo = 'text-danger fw-bold';
+                                $mostrarCampana = true;
+                            } elseif ($dias <= 3) {
+                                $textoTiempo = "Quedan {$dias} días";
+                                $claseTiempo = 'text-danger fw-bold';
+                                $mostrarCampana = true;
+                            } elseif ($dias <= 7) {
+                                $textoTiempo = "Quedan {$dias} días";
+                                $claseTiempo = 'text-warning text-dark fw-bold';
+                                $mostrarCampana = true;
+                            } else {
+                                $textoTiempo = "Quedan {$dias} días";
+                                $claseTiempo = 'text-success';
+                                $mostrarCampana = false;
+                            }
+                        }
+                    } catch (Exception $e) { $textoTiempo = "Error fecha"; }
+                } elseif (!$esPendiente) {
+                    $textoTiempo = '<span class="text-muted"><i class="bi bi-check-all"></i> Completado</span>';
+                }
+            ?>
 
-                                    <!-- 2. Revisor -->
-                                    <td>
-                                        <i class="bi bi-person-circle text-muted me-1"></i>
-                                        <?php echo htmlspecialchars($asig['nombre_revisor']); ?>
-                                    </td>
+            <tr id="eval-row-<?php echo $asig['evaluacion_id']; ?>">
+                
+                <td>
+                    <div class="fw-bold text-primary mb-1">
+                        <?php echo htmlspecialchars($asig['titulo_articulo']); ?>
+                    </div>
+                    <?php if (!empty($asig['archivo_extenso_ruta'])): ?>
+                        <a href="<?php echo BASE_URL; ?>archivo/ver/extensos/<?php echo $asig['archivo_extenso_ruta']; ?>" target="_blank" class="text-decoration-none text-secondary" style="font-size: 0.85rem;">
+                            <i class="bi bi-file-earmark-text me-1"></i>Ver Extenso Original
+                        </a>
+                    <?php endif; ?>
+                </td>
 
-                                    <!-- 3. Estatus y Veredicto -->
-                                    <td>
-                                        <?php 
-                                            $est = $asig['estatus_evaluacion'] ?? 'Pendiente';
-                                            $badgeClass = 'bg-secondary';
-                                            $iconStatus = 'bi-hourglass-split';
+                <td>
+                    <i class="bi bi-person-circle text-muted me-1"></i>
+                    <?php echo htmlspecialchars($asig['nombre_revisor']); ?>
+                </td>
 
-                                            if ($est === 'Validada') { $badgeClass = 'bg-success'; $iconStatus = 'bi-check-circle-fill'; }
-                                            elseif ($est === 'Pendiente de Firma' || $est === 'Pendiente de Validación') { $badgeClass = 'bg-warning text-dark'; $iconStatus = 'bi-exclamation-circle-fill'; }
-                                            elseif ($est === 'Rechazada por Coordinador') { $badgeClass = 'bg-danger'; $iconStatus = 'bi-x-circle-fill'; }
-                                        ?>
-                                        <span class="badge <?php echo $badgeClass; ?> mb-1">
-                                            <i class="bi <?php echo $iconStatus; ?> me-1"></i><?php echo $est; ?>
-                                        </span>
-                                        
-                                        <?php if (!empty($asig['veredicto']) && $asig['veredicto'] !== 'Pendiente'): ?>
-                                            <div class="small text-muted mt-1">
-                                                <strong>Veredicto:</strong> <?php echo htmlspecialchars($asig['veredicto']); ?>
-                                            </div>
-                                        <?php endif; ?>
-                                    </td>
+                <td>
+                    <?php echo $textoFechas; ?>
+                </td>
 
-                                    <!-- 4. Acciones (Íconos) -->
-                                    <td class="text-center">
-                                        <div class="btn-group" role="group">
-                                            <?php if ($mostrarCampana): ?>
-                                                <button type="button" class="btn btn-warning btn-sm text-dark btn-recordatorio"
-                                                    data-id="<?php echo $asig['evaluacion_id']; ?>"
-                                                    data-revisor="<?php echo htmlspecialchars($asig['nombre_revisor']); ?>"
-                                                    title="Enviar recordatorio por correo">
-                                                    <i class="bi bi-bell-fill"></i>
-                                                </button>
-                                            <?php endif; ?>
-                                            
-                                            <!-- Ver Respuestas del Formulario (Modal) -->
-                                            <?php if (!empty($asig['respuestas_formulario'])): ?>
-                                                <button type="button" class="btn btn-outline-info btn-sm btn-ver-dictamen" 
-                                                    title="Ver Evaluación Detallada"
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#modalDetalleEvaluacion"
-                                                    data-titulo="<?php echo htmlspecialchars($asig['titulo_articulo']); ?>"
-                                                    data-revisor="<?php echo htmlspecialchars($asig['nombre_revisor']); ?>"
-                                                    data-veredicto="<?php echo htmlspecialchars($asig['veredicto']); ?>"
-                                                    data-obs="<?php echo htmlspecialchars($asig['observaciones_generales'] ?? ''); ?>"
-                                                    data-rechazo="<?php echo htmlspecialchars($asig['argumento_rechazo'] ?? ''); ?>"
-                                                    data-respuestas='<?php echo $asig['respuestas_formulario']; ?>'
-                                                    data-pdf="<?php echo htmlspecialchars($asig['pdf_firmado_ruta'] ?? ''); ?>">
-                                                    <i class="bi bi-eye"></i>
-                                                </button>
-                                            <?php endif; ?>
+                <td>
+                    <span class="<?php echo $claseTiempo; ?>">
+                        <?php echo $textoTiempo; ?>
+                    </span>
+                </td>
 
-                                            <!-- Ver PDF Firmado (Si existe) -->
-                                            <!-- CORRECCIÓN 2: Ruta correcta a través del enrutador de archivos, no directo al controlador -->
-                                            <?php if (!empty($asig['pdf_firmado_ruta'])): ?>
-                                                <a href="<?php echo BASE_URL; ?>archivo/ver/evaluaciones_firmadas/<?php echo $asig['pdf_firmado_ruta']; ?>" 
-                                                   class="btn btn-outline-danger btn-sm" 
-                                                   title="Descargar PDF Firmado" target="_blank">
-                                                    <i class="bi bi-file-earmark-pdf-fill"></i>
-                                                </a>
-                                            <?php else: ?>
-                                                <button class="btn btn-outline-secondary btn-sm" disabled title="Sin firma aún">
-                                                    <i class="bi bi-file-earmark-pdf"></i>
-                                                </button>
-                                            <?php endif; ?>
+                <td>
+                    <?php 
+                        $badgeClass = 'bg-secondary';
+                        $iconStatus = 'bi-hourglass-split';
+                        if ($estatus === 'Validada') { $badgeClass = 'bg-success'; $iconStatus = 'bi-check-circle-fill'; }
+                        elseif ($estatus === 'Pendiente de Firma' || $estatus === 'Pendiente de Validación') { $badgeClass = 'bg-warning text-dark'; $iconStatus = 'bi-exclamation-circle-fill'; }
+                        elseif ($estatus === 'Rechazada por Coordinador') { $badgeClass = 'bg-danger'; $iconStatus = 'bi-x-circle-fill'; }
+                    ?>
+                    <div class="mb-2">
+                        <span class="badge <?php echo $badgeClass; ?>">
+                            <i class="bi <?php echo $iconStatus; ?> me-1"></i><?php echo $estatus; ?>
+                        </span>
+                    </div>
 
-                                            <!-- Acciones de Validación (Solo si está pendiente de validación) -->
-                                            <?php if ($est === 'Pendiente de Validación'): ?>
-                                                <button class="btn btn-outline-success btn-sm btn-aprobar-eval" 
-                                                        data-id="<?php echo $asig['evaluacion_id']; ?>" 
-                                                        title="Validar y Finalizar">
-                                                    <i class="bi bi-check-lg"></i>
-                                                </button>
-                                                <button class="btn btn-outline-danger btn-sm btn-rechazar-eval" 
-                                                        data-id="<?php echo $asig['evaluacion_id']; ?>" 
-                                                        data-bs-toggle="modal" data-bs-target="#rechazoCoordModal" 
-                                                        title="Rechazar (Solicitar corrección)">
-                                                    <i class="bi bi-x-lg"></i>
-                                                </button>
-                                            <?php endif; ?>
-
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
+                    <div class="btn-group w-100" role="group">
+                        <?php if ($mostrarCampana): ?>
+                            <button type="button" class="btn btn-warning btn-sm text-dark btn-recordatorio"
+                                data-id="<?php echo $asig['evaluacion_id']; ?>"
+                                data-revisor="<?php echo htmlspecialchars($asig['nombre_revisor']); ?>"
+                                title="Enviar recordatorio">
+                                <i class="bi bi-bell-fill"></i>
+                            </button>
                         <?php endif; ?>
-                    </tbody>
+
+                        <?php if (!empty($asig['respuestas_formulario'])): ?>
+                            <button type="button" class="btn btn-outline-info btn-sm btn-ver-dictamen" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#modalDetalleEvaluacion"
+                                data-titulo="<?php echo htmlspecialchars($asig['titulo_articulo']); ?>"
+                                data-revisor="<?php echo htmlspecialchars($asig['nombre_revisor']); ?>"
+                                data-veredicto="<?php echo htmlspecialchars($asig['veredicto']); ?>"
+                                data-obs="<?php echo htmlspecialchars($asig['observaciones_generales'] ?? ''); ?>"
+                                data-rechazo="<?php echo htmlspecialchars($asig['argumento_rechazo'] ?? ''); ?>"
+                                data-respuestas='<?php echo $asig['respuestas_formulario']; ?>'
+                                data-pdf="<?php echo htmlspecialchars($asig['pdf_firmado_ruta'] ?? ''); ?>">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        <?php endif; ?>
+
+                        <?php if ($estatus === 'Pendiente de Validación'): ?>
+                            <button class="btn btn-outline-success btn-sm btn-aprobar-eval" 
+                                    data-id="<?php echo $asig['evaluacion_id']; ?>" 
+                                    title="Validar">
+                                <i class="bi bi-check-lg"></i>
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm btn-rechazar-eval" 
+                                    data-id="<?php echo $asig['evaluacion_id']; ?>" 
+                                    data-bs-toggle="modal" data-bs-target="#rechazoCoordModal" 
+                                    title="Rechazar">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        <?php endif; ?>
+                    </div>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+    <?php endif; ?>
+</tbody>
                 </table>
             </div>
         </div>
