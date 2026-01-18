@@ -32,81 +32,81 @@
                         <?php else: ?>
                             <?php foreach ($asignacionesExtensos as $asig): ?>
                                 <?php 
-                                    // 1. OBTENCIÓN DE DATOS
-                                    $fechaAsig = $asig['fecha_asignacion'] ?? null;
-                                    $estatus = $asig['estatus_evaluacion'] ?? 'Pendiente';
+                                    // --- LÓGICA ROBUSTA DE FECHAS Y ESTATUS ---
                                     
-                                    // Normalizamos estatus para evitar errores por espacios
-                                    $estatus = trim($estatus);
+                                    // 1. Limpieza de datos
+                                    $estatusRaw = $asig['estatus_evaluacion'] ?? 'Pendiente';
+                                    $fechaRaw = $asig['fecha_asignacion'] ?? null;
                                     
-                                    // Definimos qué se considera "Pendiente" (el proceso está vivo)
-                                    $esPendiente = in_array($estatus, ['Pendiente', 'Pendiente de Firma', 'Pendiente de Validación']);
+                                    // Detectar si contiene la palabra "Pendiente" (ignora mayúsculas/espacios)
+                                    $esPendiente = (stripos($estatusRaw, 'Pendiente') !== false);
 
-                                    // Variables de visualización por defecto
-                                    $textoFechas = '<span class="text-muted small">-</span>';
-                                    $textoTiempo = '<span class="text-muted">-</span>';
+                                    // Valores por defecto para visualización
+                                    $htmlFechas = '<span class="text-muted small">-</span>';
+                                    $htmlTiempo = '<span class="badge bg-secondary">Finalizado</span>';
                                     $claseTiempo = '';
-                                    $mostrarCampana = false;
+                                    $mostrarCampana = true; // Siempre activo por defecto
 
-                                    // 2. LÓGICA DE TIEMPO
-                                    if ($esPendiente) {
-                                        if ($fechaAsig) {
-                                            try {
-                                                $fInicio = new DateTime($fechaAsig);
-                                                $fLimite = (clone $fInicio)->modify('+15 days');
-                                                $hoy = new DateTime();
-                                                
-                                                // Visualización de fechas
-                                                $textoFechas = '<div style="font-size: 0.8rem;">
-                                                                    <div class="text-muted"><i class="bi bi-calendar-check me-1"></i>' . $fInicio->format('d/m/Y') . '</div>
-                                                                    <div class="fw-bold text-dark"><i class="bi bi-flag-fill me-1"></i>' . $fLimite->format('d/m/Y') . '</div>
-                                                                </div>';
+                                    // 2. Cálculo SIEMPRE si hay fecha (no solo si está pendiente)
+                                    if (!empty($fechaRaw)) {
+                                        try {
+                                            // Crear objetos de fecha
+                                            $fInicio = new DateTime($fechaRaw);
+                                            $fLimite = (clone $fInicio)->modify('+15 days');
+                                            $hoy = new DateTime('today'); // Solo la fecha, sin hora
+                                            
+                                            // Renderizar columna Fechas
+                                            $htmlFechas = '<div style="font-size: 0.8rem; line-height: 1.4;">
+                                                            <div class="text-muted"><i class="bi bi-calendar-check me-1"></i>Asig: ' . $fInicio->format('d/m/Y') . '</div>
+                                                            <div class="fw-bold text-dark"><i class="bi bi-flag-fill me-1"></i>Lim: ' . $fLimite->format('d/m/Y') . '</div>
+                                                           </div>';
 
-                                                // Cálculo de días
-                                                $diff = $hoy->diff($fLimite);
-                                                $dias = $diff->days;
-                                                $vencido = ($diff->invert === 1); // 1 si hoy > limite
+                                            // Calcular diferencia correcta: límite - hoy
+                                            $diff = $fLimite->diff($hoy);
+                                            $dias = (int)$diff->format('%R%a'); // %R da signo, %a da días
 
-                                                if ($vencido) {
-                                                    $textoTiempo = "Vencido hace <strong>{$dias} días</strong>";
-                                                    $claseTiempo = 'text-danger';
-                                                    $mostrarCampana = true;
-                                                } else {
-                                                    if ($dias == 0) {
-                                                        $textoTiempo = "Vence <strong>HOY</strong>";
-                                                        $claseTiempo = 'text-danger fw-bold';
-                                                        $mostrarCampana = true;
-                                                    } elseif ($dias <= 3) {
-                                                        $textoTiempo = "Quedan <strong>{$dias} días</strong>";
-                                                        $claseTiempo = 'text-danger fw-bold';
-                                                        $mostrarCampana = true;
-                                                    } elseif ($dias <= 7) {
-                                                        $textoTiempo = "Quedan <strong>{$dias} días</strong>";
-                                                        $claseTiempo = 'text-warning text-dark fw-bold';
-                                                        $mostrarCampana = true;
-                                                    } else {
-                                                        $textoTiempo = "Quedan <strong>{$dias} días</strong>";
-                                                        $claseTiempo = 'text-success fw-bold';
-                                                        $mostrarCampana = false; 
-                                                    }
-                                                }
-                                            } catch (Exception $e) {
-                                                $textoTiempo = "Error formato fecha";
+                                            // Si dias es negativo, está vencido
+                                            if ($dias < 0) {
+                                                // Vencido
+                                                $htmlTiempo = "Vencido hace <strong>" . abs($dias) . " días</strong>";
+                                                $claseTiempo = 'text-danger fw-bold';
+                                                $mostrarCampana = true;
+                                            } elseif ($dias == 0) {
+                                                // Hoy es el último día
+                                                $htmlTiempo = "Vence <strong>HOY</strong>";
+                                                $claseTiempo = 'text-danger fw-bold';
+                                                $mostrarCampana = true;
+                                            } elseif ($dias <= 3) {
+                                                // 1-3 días: rojo
+                                                $htmlTiempo = "Quedan <strong>{$dias} días</strong>";
+                                                $claseTiempo = 'text-danger fw-bold';
+                                                $mostrarCampana = true;
+                                            } elseif ($dias <= 7) {
+                                                // 4-7 días: amarillo
+                                                $htmlTiempo = "Quedan <strong>{$dias} días</strong>";
+                                                $claseTiempo = 'text-warning text-dark fw-bold';
+                                                $mostrarCampana = true;
+                                            } else {
+                                                // Más de 7 días: verde
+                                                $htmlTiempo = "Quedan <strong>{$dias} días</strong>";
+                                                $claseTiempo = 'text-success fw-bold';
+                                                $mostrarCampana = true;
                                             }
-                                        } else {
-                                            $textoFechas = '<span class="badge bg-warning text-dark">Sin fecha</span>';
-                                            $textoTiempo = '<span class="text-muted small">No se puede calcular</span>';
+                                        } catch (Exception $e) {
+                                            $htmlTiempo = '<span class="text-danger small">Error Fecha</span>';
+                                            error_log('Error en procesamiento de fecha: ' . $e->getMessage());
                                         }
                                     } else {
-                                        // Si NO está pendiente (Validada, Rechazada, etc.)
-                                        $textoTiempo = '<span class="badge bg-secondary">Finalizado</span>';
+                                        $htmlFechas = '<span class="badge bg-warning text-dark">Sin fecha</span>';
+                                        $htmlTiempo = '<span class="text-muted small">No calculable</span>';
+                                        $mostrarCampana = false;
                                     }
                                 ?>
 
                                 <tr id="eval-row-<?php echo $asig['evaluacion_id']; ?>">
                                     
                                     <td>
-                                        <div class="fw-bold text-primary text-truncate" style="max-width: 250px;" title="<?php echo htmlspecialchars($asig['titulo_articulo']); ?>">
+                                        <div class="fw-bold text-primary mb-1 text-truncate" style="max-width: 300px;" title="<?php echo htmlspecialchars($asig['titulo_articulo']); ?>">
                                             <?php echo htmlspecialchars($asig['titulo_articulo']); ?>
                                         </div>
                                         <?php if (!empty($asig['archivo_extenso_ruta'])): ?>
@@ -129,45 +129,40 @@
                                     </td>
 
                                     <td>
-                                        <?php echo $textoFechas; ?>
+                                        <?php echo $htmlFechas; ?>
                                     </td>
 
                                     <td>
                                         <span class="<?php echo $claseTiempo; ?>">
-                                            <?php echo $textoTiempo; ?>
+                                            <?php echo $htmlTiempo; ?>
                                         </span>
                                     </td>
 
                                     <td>
-                                        <?php 
-                                            $badgeClass = 'bg-secondary';
-                                            $iconStatus = 'bi-hourglass-split';
-                                            if ($estatus === 'Validada') { $badgeClass = 'bg-success'; $iconStatus = 'bi-check-circle-fill'; }
-                                            elseif ($estatus === 'Pendiente de Firma') { $badgeClass = 'bg-info text-dark'; $iconStatus = 'bi-pen-fill'; }
-                                            elseif ($estatus === 'Pendiente de Validación') { $badgeClass = 'bg-warning text-dark'; $iconStatus = 'bi-exclamation-circle-fill'; }
-                                            elseif ($estatus === 'Rechazada por Coordinador') { $badgeClass = 'bg-danger'; $iconStatus = 'bi-x-circle-fill'; }
-                                        ?>
                                         <div class="mb-2">
-                                            <span class="badge <?php echo $badgeClass; ?>">
-                                                <i class="bi <?php echo $iconStatus; ?> me-1"></i><?php echo $estatus; ?>
+                                            <?php 
+                                                $bgBadge = 'bg-secondary';
+                                                if (stripos($estatusRaw, 'Validada') !== false) $bgBadge = 'bg-success';
+                                                elseif (stripos($estatusRaw, 'Firma') !== false) $bgBadge = 'bg-info text-dark';
+                                                elseif (stripos($estatusRaw, 'Validación') !== false) $bgBadge = 'bg-warning text-dark';
+                                                elseif (stripos($estatusRaw, 'Rechazada') !== false) $bgBadge = 'bg-danger';
+                                            ?>
+                                            <span class="badge <?php echo $bgBadge; ?>">
+                                                <?php echo htmlspecialchars($estatusRaw); ?>
                                             </span>
                                         </div>
 
                                         <div class="btn-group w-100 shadow-sm" role="group">
                                             
-                                            <?php if ($mostrarCampana): ?>
-                                                <button type="button" class="btn btn-warning btn-sm text-dark btn-recordatorio"
-                                                    data-id="<?php echo $asig['evaluacion_id']; ?>"
-                                                    data-revisor="<?php echo htmlspecialchars($asig['nombre_revisor']); ?>"
-                                                    title="Enviar recordatorio por correo">
-                                                    <i class="bi bi-bell-fill"></i>
-                                                </button>
-                                            <?php else: ?>
-                                                <button disabled class="btn btn-light btn-sm text-muted border"><i class="bi bi-bell"></i></button>
-                                            <?php endif; ?>
+                                            <button type="button" class="btn btn-warning btn-sm text-dark btn-recordatorio"
+                                                data-id="<?php echo $asig['evaluacion_id']; ?>"
+                                                data-revisor="<?php echo htmlspecialchars($asig['nombre_revisor']); ?>"
+                                                title="Enviar recordatorio al revisor">
+                                                <i class="bi bi-bell-fill"></i>
+                                            </button>
 
                                             <?php if (!empty($asig['respuestas_formulario'])): ?>
-                                                <button type="button" class="btn btn-outline-primary btn-sm btn-ver-dictamen" 
+                                                <button type="button" class="btn btn-outline-primary btn-sm" 
                                                     data-bs-toggle="modal" 
                                                     data-bs-target="#modalDetalleEvaluacion"
                                                     data-titulo="<?php echo htmlspecialchars($asig['titulo_articulo']); ?>"
@@ -176,8 +171,7 @@
                                                     data-obs="<?php echo htmlspecialchars($asig['observaciones_generales'] ?? ''); ?>"
                                                     data-rechazo="<?php echo htmlspecialchars($asig['argumento_rechazo'] ?? ''); ?>"
                                                     data-respuestas='<?php echo $asig['respuestas_formulario']; ?>'
-                                                    data-pdf="<?php echo htmlspecialchars($asig['pdf_firmado_ruta'] ?? ''); ?>"
-                                                    title="Ver Detalle">
+                                                    data-pdf="<?php echo htmlspecialchars($asig['pdf_firmado_ruta'] ?? ''); ?>">
                                                     <i class="bi bi-eye"></i>
                                                 </button>
                                             <?php else: ?>
@@ -192,12 +186,12 @@
                                                     <i class="bi bi-file-earmark-pdf-fill"></i>
                                                 </a>
                                             <?php else: ?>
-                                                <button disabled class="btn btn-light btn-sm text-muted border" title="Sin PDF firmado aún">
+                                                <button disabled class="btn btn-light btn-sm text-muted border" title="Sin archivo firmado">
                                                     <i class="bi bi-file-earmark-pdf"></i>
                                                 </button>
                                             <?php endif; ?>
 
-                                            <?php if ($estatus === 'Pendiente de Validación'): ?>
+                                            <?php if (stripos($estatusRaw, 'Pendiente de Validación') !== false): ?>
                                                 <button class="btn btn-outline-success btn-sm btn-aprobar-eval" 
                                                         data-id="<?php echo $asig['evaluacion_id']; ?>" 
                                                         title="Validar">
@@ -273,8 +267,10 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const baseUrl = '<?php echo BASE_URL; ?>';
+    const csrfToken = '<?php echo $_SESSION["csrf_token"] ?? ""; ?>';
 
     function apiCall(url, data, onSuccess) {
+        data.csrf_token = csrfToken;
         fetch(`${baseUrl}${url}`, {
             method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
         })
@@ -289,7 +285,6 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(err => { console.error(err); alert("Error de red."); });
     }
 
-    // Botón Recordatorio
     document.querySelectorAll('.btn-recordatorio').forEach(btn => {
         btn.addEventListener('click', function() {
             const id = this.dataset.id;
@@ -305,7 +300,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Lógica Modales
     const modalDetalle = document.getElementById('modalDetalleEvaluacion');
     modalDetalle.addEventListener('show.bs.modal', function (event) {
         const b = event.relatedTarget;
@@ -338,7 +332,6 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch(e){}
     });
 
-    // Validaciones
     const modalRechazoEl = document.getElementById('rechazoCoordModal');
     const modalRechazo = new bootstrap.Modal(modalRechazoEl);
     modalRechazoEl.addEventListener('show.bs.modal', function(e) { document.getElementById('idEvaluacionRechazo').value = e.relatedTarget.dataset.id; });
