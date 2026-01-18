@@ -351,16 +351,17 @@ public static function obtenerDetallesDeAsignacionesPorArea(int $area_id): array
         $pdo = Database::conectar();
         $sql = "SELECT 
                     ee.id as evaluacion_id,
-                    ee.fecha_asignacion,
-                    r.titulo as titulo_articulo,
-                    u.nombre_completo as nombre_revisor,
-                    u.correo as correo_revisor,
+                    ee.fecha_asignacion, 
                     ee.estatus_evaluacion,
                     ee.veredicto,
                     ee.respuestas_formulario,
                     ee.observaciones_generales,
+                    ee.argumento_rechazo,
                     ee.pdf_firmado_ruta,
-                    ev.archivo_ruta as archivo_articulo
+                    r.titulo as titulo_articulo,
+                    u.nombre_completo as nombre_revisor,
+                    u.correo as correo_revisor,
+                    ev.archivo_ruta as archivo_extenso_ruta
                 FROM evaluaciones_extensos ee
                 JOIN extenso_versiones ev ON ee.extenso_version_id = ev.id
                 JOIN extensos e ON ev.extenso_id = e.id
