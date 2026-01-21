@@ -439,6 +439,7 @@ class RevisorController {
 
  public function supervisionEvaluaciones() {
         if (!$this->autorizar()) return;
+        CSRFHelper::generateToken();
 
 
         $pdo = Database::conectar();

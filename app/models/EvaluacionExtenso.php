@@ -33,11 +33,12 @@ class EvaluacionExtenso {
 
     public static function buscarPorId(int $id) {
         $pdo = Database::conectar();
-        $sql = "SELECT ee.*, ev.archivo_ruta, r.titulo 
+        $sql = "SELECT ee.*, ev.archivo_ruta, r.titulo, u.correo as correo_revisor, u.nombre_completo as nombre_revisor
                 FROM evaluaciones_extensos ee
                 JOIN extenso_versiones ev ON ee.extenso_version_id = ev.id
                 JOIN extensos e ON ev.extenso_id = e.id
                 JOIN resumenes r ON e.resumen_id = r.id
+                JOIN usuarios u ON ee.revisor_id = u.id
                 WHERE ee.id = :id";
         $stmt = $pdo->prepare($sql);
         $stmt->execute(['id' => $id]);

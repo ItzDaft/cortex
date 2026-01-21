@@ -62,20 +62,16 @@
                                                             <div class="fw-bold text-dark"><i class="bi bi-flag-fill me-1"></i>Lim: ' . $fLimite->format('d/m/Y') . '</div>
                                                            </div>';
 
-                                            // Calcular diferencia correcta
-                                            $diff = $fLimite->diff($hoy);
-                                            // invert = 1 significa que $fLimite < $hoy (ya pasó)
-                                            // invert = 0 significa que $fLimite > $hoy (aún quedan días)
+                                            // Calcular diferencia correcta: Desde HOY hasta LIMITE
+                                            $diff = $hoy->diff($fLimite);
                                             $dias = (int)$diff->days;
-                                            if ($diff->invert === 1) {
-                                                // Vencido (hoy es después del límite)
-                                                $dias = -$dias;
-                                            }
 
-                                            // Si dias es negativo, está vencido
-                                            if ($dias < 0) {
+                                            // Si invert es 1, significa que $hoy > $fLimite (El límite está en el pasado -> VENCIDO)
+                                            $esVencido = ($diff->invert === 1);
+
+                                            if ($esVencido) {
                                                 // Vencido
-                                                $htmlTiempo = "Vencido hace <strong>" . abs($dias) . " días</strong>";
+                                                $htmlTiempo = "Vencido hace <strong>{$dias} días</strong>";
                                                 $claseTiempo = 'text-danger fw-bold';
                                                 $mostrarCampana = true;
                                             } elseif ($dias == 0) {
@@ -274,12 +270,24 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const baseUrl = '<?php echo BASE_URL; ?>';
+    const csrfToken = '<?php echo $_SESSION['csrf_token'] ?? ''; ?>';
 
     function apiCall(url, data, onSuccess) {
+        // Add CSRF token to data
+        data.csrf_token = csrfToken;
+
         fetch(`${baseUrl}${url}`, {
             method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
         })
-        .then(r => r.json())
+        .then(r => r.text())
+        .then(text => {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error("Server response not JSON:", text);
+                throw new Error("Respuesta del servidor inválida.");
+            }
+        })
         .then(resp => {
             if (resp.error) { alert(resp.error); } 
             else { 
@@ -287,7 +295,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if(onSuccess) onSuccess(); 
             }
         })
-        .catch(err => { console.error(err); alert("Error de red."); });
+        .catch(err => { console.error(err); alert("Error de red o servidor."); });
     }
 
     document.querySelectorAll('.btn-recordatorio').forEach(btn => {
