@@ -439,7 +439,7 @@ class RevisorController {
 
  public function supervisionEvaluaciones() {
         if (!$this->autorizar()) return;
-
+        CSRFHelper::generateToken();
 
         $pdo = Database::conectar();
         $usuario_id = $_SESSION['usuario_id'];
@@ -514,6 +514,12 @@ class RevisorController {
         }
 
         $datos = json_decode(file_get_contents('php://input'), true);
+        $tokenRecibido = $datos['csrf_token'] ?? '';
+        if (!CSRFHelper::verifyToken($tokenRecibido)) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Error de seguridad (Token inválido). Por favor recarga la página.']);
+            return;
+        }
         $evaluacion_id = $datos['evaluacion_id'] ?? null;
 
         if (!$evaluacion_id) {
@@ -546,7 +552,7 @@ class RevisorController {
             $hoy = new DateTime();
             
             $intervalo = $hoy->diff($fechaLimite);
-            $esVencido = ($hoy > $fechaLimite);
+            $esVencido = ($intervalo->invert === 1);
             $dias = $intervalo->days;
 
             $situacionTexto = "";
