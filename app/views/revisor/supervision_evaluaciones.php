@@ -5,7 +5,6 @@
         <li class="breadcrumb-item active">Evaluaciones</li>
     </ol>
 
-    <?php CSRFHelper::getTokenInput(); ?>
 
     <div class="card mb-5 shadow-sm">
         <div class="card-header bg-primary text-white">
@@ -275,12 +274,8 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const baseUrl = '<?php echo BASE_URL; ?>';
-    // Obtener el token CSRF del input HTML generado por CSRFHelper::getTokenInput()
-    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
 
     function apiCall(url, data, onSuccess) {
-        // Añadir el token CSRF a cada petición
-        data.csrf_token = csrfToken;
         fetch(`${baseUrl}${url}`, {
             method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
         })
