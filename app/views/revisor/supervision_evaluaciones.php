@@ -139,6 +139,19 @@
                                             <span class="badge <?php echo $bgBadge; ?>">
                                                 <?php echo htmlspecialchars($estatusRaw); ?>
                                             </span>
+                                            <?php if (!empty($asig['veredicto']) && $asig['veredicto'] !== 'Pendiente'): ?>
+                                                <?php
+                                                    $bgVeredicto = 'bg-secondary';
+                                                    if ($asig['veredicto'] === 'Favorable y Publicable') $bgVeredicto = 'bg-success';
+                                                    elseif ($asig['veredicto'] === 'Favorable con Correcciones') $bgVeredicto = 'bg-info text-dark';
+                                                    elseif ($asig['veredicto'] === 'No Publicable') $bgVeredicto = 'bg-danger';
+                                                ?>
+                                                <div class="mt-1">
+                                                    <span class="badge <?php echo $bgVeredicto; ?>">
+                                                        <?php echo htmlspecialchars($asig['veredicto']); ?>
+                                                    </span>
+                                                </div>
+                                            <?php endif; ?>
                                         </div>
 
                                         <div class="btn-group w-100 shadow-sm" role="group">
