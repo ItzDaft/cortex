@@ -112,7 +112,7 @@
                                             </div>
                                             <div>
                                                 <div class="fw-bold small"><?php echo htmlspecialchars($asig['nombre_revisor']); ?></div>
-                                                <div class="text-muted small" style="font-size: 0.75rem;"><?php echo htmlspecialchars($asig['correo_revisor'] ?? ''); ?></div>
+                                                <div class="text-muted small" style="font-size: 0.75rem;"><?php echo htmlspecialchars($asig['correo'] ?? ''); ?></div>
                                             </div>
                                         </div>
                                     </td>

@@ -459,7 +459,7 @@ class RevisorController {
                 res.titulo AS titulo_articulo, 
                 ver.archivo_ruta AS archivo_extenso_ruta,
                 rev.nombre_completo AS nombre_revisor,
-                rev.correo AS correo_revisor
+                rev.correo
             FROM evaluaciones_extensos ev
             INNER JOIN extenso_versiones ver ON ev.extenso_version_id = ver.id
             INNER JOIN extensos ext ON ver.extenso_id = ext.id
