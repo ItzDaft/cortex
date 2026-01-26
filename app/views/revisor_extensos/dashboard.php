@@ -19,7 +19,7 @@
                                 <tr>
                                     <td><?php echo htmlspecialchars($eval['titulo']); ?></td>
                                     <td><span class="badge bg-secondary">v<?php echo $eval['intento']; ?></span></td>
-                                    <td><?php echo date('d/m/Y'); //Aqui poner el fecha_asignacion contenida en la base de datos en la tabla evaluacion_extenso?></td>
+                                    <td><?php echo !empty($eval['fecha_asignacion']) ? date('d/m/Y', strtotime($eval['fecha_asignacion'])) : '-'; ?></td>
                                     <td class="text-center">
                                         <!-- Botón para ver archivo -->
                                         <a href="<?php echo BASE_URL; ?>archivo/ver/extensos/<?php echo $eval['archivo_ruta']; ?>" target="_blank" class="btn btn-outline-secondary btn-sm" title="Ver Artículo">
