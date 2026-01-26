@@ -147,7 +147,6 @@ class RevisorController {
         $revisionesAsignadas = Revision::buscarAsignadasPorRevisor($revisor['id']);
         $revisionesCompletadas = Revision::buscarCompletadasPorRevisor($revisor['id']);
         
-        // Nueva lista para supervisión de extensos
         $asignacionesExtensos = EvaluacionExtenso::obtenerDetallesDeAsignacionesPorArea($revisor['area_id']);
 
         require_once BACKEND_ROOT . '/app/views/layout/header.php';
@@ -358,7 +357,6 @@ class RevisorController {
             return;
         }
         
-        // Carga solo los datos necesarios para las etapas A, B, C y D
         $extensosPendientesFiltro = Extenso::obtenerPendientesDeFiltroPorArea($coordinadorArea['area_id']);
         $extensosPorAsignar = Extenso::obtenerPendientesDeAsignacionPorArea($coordinadorArea['area_id']);
         $extensosEnRevision = Extenso::obtenerEnRevisionPorArea($coordinadorArea['area_id']);
@@ -453,13 +451,13 @@ class RevisorController {
                 ev.id AS evaluacion_id,
                 ev.estatus_evaluacion, 
                 ev.veredicto,
-                ev.fecha_asignacion, -- Columna añadida recientemente
+                ev.fecha_asignacion, 
                 ev.respuestas_formulario,
                 ev.observaciones_generales,
                 ev.argumento_rechazo,
                 ev.pdf_firmado_ruta,
-                res.titulo AS titulo_articulo, -- Obtenido desde resumenes
-                ver.archivo_ruta AS archivo_extenso_ruta, -- Obtenido desde versiones
+                res.titulo AS titulo_articulo, 
+                ver.archivo_ruta AS archivo_extenso_ruta,
                 rev.nombre_completo AS nombre_revisor
             FROM evaluaciones_extensos ev
             INNER JOIN extenso_versiones ver ON ev.extenso_version_id = ver.id

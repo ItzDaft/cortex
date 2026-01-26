@@ -10,7 +10,6 @@ class EvaluacionExtenso {
         $pdo = Database::conectar();
         try {
             $pdo->beginTransaction();
-            // CAMBIO: Agregamos fecha_asignacion
             $sql = "INSERT INTO evaluaciones_extensos (extenso_version_id, revisor_id, estatus_evaluacion, veredicto, fecha_asignacion) 
                     VALUES (:extenso_version_id, :revisor_id, 'Pendiente', 'Pendiente', NOW())";
             $stmt = $pdo->prepare($sql);
@@ -46,7 +45,7 @@ class EvaluacionExtenso {
     }   
 
     /**
-     * Guarda las respuestas y el veredicto de una evaluación de extenso (FINAL).
+     * Guarda las respuestas y el veredicto de una evaluación de extenso .
      */
     public static function guardarEvaluacion(int $evaluacion_id, array $datos): bool {
         $pdo = Database::conectar();
@@ -277,7 +276,6 @@ public static function actualizarRevisores(int $extenso_version_id, array $revis
         $aceptados = $conteos['Favorable y Publicable'] ?? 0;
         $conCorrecciones = $conteos['Favorable con Correcciones'] ?? 0;
         $rechazados = $conteos['No Publicable'] ?? 0;
-        // $pendientes= $conteos['Pendiente'] ?? 0; // No lo usamos para decidir, pero existe
         
         $estatus_final_extenso = '';
 
@@ -323,8 +321,6 @@ public static function actualizarRevisores(int $extenso_version_id, array $revis
         $revisores_ids = self::obtenerIdsRevisoresAsignados($version_anterior_id);
         if (empty($revisores_ids)) return false;
         
-        // Al llamar a asignarRevisores aquí, se usarán los valores 'Pendiente' definidos arriba.
-        // Así los revisores empiezan de cero con la nueva versión.
         return self::asignarRevisores($nueva_version_id, $revisores_ids);
     }
 

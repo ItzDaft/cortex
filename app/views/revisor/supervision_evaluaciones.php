@@ -33,64 +33,50 @@
                         <?php else: ?>
                             <?php foreach ($asignacionesExtensos as $asig): ?>
                                 <?php 
-                                    // --- LÓGICA ROBUSTA DE FECHAS Y ESTATUS ---
                                     
-                                    // 1. Limpieza de datos
                                     $estatusRaw = $asig['estatus_evaluacion'] ?? 'Pendiente';
                                     $fechaRaw = $asig['fecha_asignacion'] ?? null;
                                     
-                                    // Detectar si contiene la palabra "Pendiente" (ignora mayúsculas/espacios)
                                     $esPendiente = (stripos($estatusRaw, 'Pendiente') !== false);
 
-                                    // Valores por defecto para visualización
                                     $htmlFechas = '<span class="text-muted small">-</span>';
                                     $htmlTiempo = '<span class="badge bg-secondary">Finalizado</span>';
                                     $claseTiempo = '';
-                                    $mostrarCampana = true; // Siempre activo por defecto
+                                    $mostrarCampana = true; 
 
-                                    // 2. Cálculo SIEMPRE si hay fecha (no solo si está pendiente)
                                     if (!empty($fechaRaw)) {
                                         try {
-                                            // Crear objetos de fecha
                                             $fInicio = new DateTime($fechaRaw);
                                             $fLimite = (clone $fInicio)->modify('+15 days');
                                             $hoy = new DateTime('today'); // Solo la fecha, sin hora
                                             
-                                            // Renderizar columna Fechas
                                             $htmlFechas = '<div style="font-size: 0.8rem; line-height: 1.4;">
                                                             <div class="text-muted"><i class="bi bi-calendar-check me-1"></i>Asig: ' . $fInicio->format('d/m/Y') . '</div>
                                                             <div class="fw-bold text-dark"><i class="bi bi-flag-fill me-1"></i>Lim: ' . $fLimite->format('d/m/Y') . '</div>
                                                            </div>';
 
-                                            // Calcular diferencia correcta: Desde HOY hasta LIMITE
                                             $diff = $hoy->diff($fLimite);
                                             $dias = (int)$diff->days;
 
-                                            // Si invert es 1, significa que $hoy > $fLimite (El límite está en el pasado -> VENCIDO)
                                             $esVencido = ($diff->invert === 1); 
 
                                             if ($esVencido) {
-                                                // Vencido
                                                 $htmlTiempo = "Vencido hace <strong>{$dias} días</strong>";
                                                 $claseTiempo = 'text-danger fw-bold';
                                                 $mostrarCampana = true;
                                             } elseif ($dias == 0) {
-                                                // Hoy es el último día
                                                 $htmlTiempo = "Vence <strong>HOY</strong>";
                                                 $claseTiempo = 'text-danger fw-bold';
                                                 $mostrarCampana = true;
                                             } elseif ($dias <= 3) {
-                                                // 1-3 días: rojo
                                                 $htmlTiempo = "Quedan <strong>{$dias} días</strong>";
                                                 $claseTiempo = 'text-danger fw-bold';
                                                 $mostrarCampana = true;
                                             } elseif ($dias <= 7) {
-                                                // 4-7 días: amarillo
                                                 $htmlTiempo = "Quedan <strong>{$dias} días</strong>";
                                                 $claseTiempo = 'text-warning text-dark fw-bold';
                                                 $mostrarCampana = true;
                                             } else {
-                                                // Más de 7 días: verde
                                                 $htmlTiempo = "Quedan <strong>{$dias} días</strong>";
                                                 $claseTiempo = 'text-success fw-bold';
                                                 $mostrarCampana = true;
@@ -273,7 +259,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = '<?php echo $_SESSION['csrf_token'] ?? ''; ?>';
 
     function apiCall(url, data, onSuccess) {
-        // Add CSRF token to data
         data.csrf_token = csrfToken;
 
         fetch(`${baseUrl}${url}`, {

@@ -23,12 +23,10 @@ class RevisorExtensosController {
 
         $evaluacion = EvaluacionExtenso::buscarPorId($evaluacion_id);
 
-        // Validaciones de seguridad
         if (!$evaluacion || $evaluacion['revisor_id'] != $_SESSION['usuario_id']) {
             redirect('revisorExtensos/dashboard');
         }
         
-        // Solo permitir entrar si es favorable y requiere firma
         if ($evaluacion['veredicto'] !== 'Favorable y Publicable') {
             redirect('revisorExtensos/dashboard');
         }
@@ -56,7 +54,6 @@ class RevisorExtensosController {
         if (!isset($_SESSION['usuario_id'])) { http_response_code(403); echo json_encode(['error' => 'Permisos insuficientes.']); return; }
 
         $datos_post = $_POST;
-        // Validaciones básicas
         for ($i = 1; $i <= 6; $i++) {
             if (empty($datos_post['pregunta_'.$i])) { http_response_code(400); echo json_encode(['error' => 'Responde todas las preguntas.']); return; }
         }
@@ -73,19 +70,15 @@ class RevisorExtensosController {
             'argumento_rechazo'       => ($veredicto === 'No Publicable') ? $datos_post['argumento_rechazo'] : null
         ];
 
-        // Guardamos. El modelo pone "Pendiente de Firma" por defecto en estatus_evaluacion si usamos guardarEvaluacion
         if (EvaluacionExtenso::guardarEvaluacion($evaluacion_id, $datos_guardar)) {
             
             if ($veredicto === 'Favorable y Publicable') {
-                // Caso: Requiere Firma. Enviamos la URL para redirigir a la vista de firma.
                 echo json_encode([
                     'mensaje' => 'Evaluación guardada. Redirigiendo a firma...',
                     'redirect_url' => BASE_URL . 'revisorExtensos/firmar/' . $evaluacion_id
                 ]);
             } else {
-                // Caso: No requiere firma. Finalizamos inmediatamente cambiando el estatus a Validada.
                 EvaluacionExtenso::validarEvaluacion($evaluacion_id, 'Validada', null);
-                // Verificar consenso por si esto cierra el ciclo
                 $ev = EvaluacionExtenso::buscarPorId($evaluacion_id);
                 EvaluacionExtenso::verificarConsenso($ev['extenso_version_id']);
 
@@ -107,7 +100,6 @@ class RevisorExtensosController {
             http_response_code(400); echo json_encode(['error' => 'Archivo no recibido.']); return;
         }
         
-        // Validar tipo PDF
         if ($_FILES['pdf_firmado']['type'] !== 'application/pdf') {
             http_response_code(400); echo json_encode(['error' => 'Solo PDF.']); return;
         }
@@ -119,7 +111,6 @@ class RevisorExtensosController {
         $name = 'evaluacion_' . $evaluacion_id . '_firmada_' . time() . '.' . $ext;
         
         if (move_uploaded_file($_FILES['pdf_firmado']['tmp_name'], $dir . $name)) {
-            // Actualizar BD: Pone estado 'Pendiente de Validación'
             if (EvaluacionExtenso::guardarPdfFirmado($evaluacion_id, $name)) {
                 echo json_encode(['mensaje' => 'Documento firmado subido. Pendiente de validación.']);
             } else {
@@ -130,7 +121,6 @@ class RevisorExtensosController {
         }
     }
 
-    // ... (guardarBorrador, completarPerfil, etc. siguen igual)
     public function completarPerfil() {
         if (!isset($_SESSION['usuario_id']) || !in_array('Revisor de Extensos', $_SESSION['usuario_roles'])) {
             redirect('');
@@ -138,7 +128,6 @@ class RevisorExtensosController {
         if (Usuario::perfilRevisorEstaCompleto($_SESSION['usuario_id'])) {
             redirect('revisorExtensos/dashboard');
         }
-        // Cargar datos necesarios para la vista
         $areas = AreaTematica::obtenerTodas();
         $usuario = Usuario::buscarPorId($_SESSION['usuario_id']);
         CSRFHelper::generateToken();
@@ -160,12 +149,10 @@ class RevisorExtensosController {
             }
         }
 
-        // Validar que el usuario aceptó los términos
         if (!isset($_POST['acepta_terminos'])) {
             http_response_code(400); echo json_encode(['error' => 'Debes aceptar los términos y políticas.']); return;
         }
 
-        // Validar area_id existe en la tabla areas_tematicas
         $area_id = $_POST['area_id'] ?? null;
         if (!ctype_digit((string)$area_id) || !AreaTematica::buscarPorId((int)$area_id)) {
             http_response_code(400); echo json_encode(['error' => 'Área temática inválida.']); return;
@@ -176,7 +163,6 @@ class RevisorExtensosController {
         $directorio_revisores = BACKEND_ROOT . '/uploads/revisores_perfil/';
         if (!is_dir($directorio_revisores)) { mkdir($directorio_revisores, 0777, true); }
 
-        // Comprobante SNI es obligatorio ahora
         if (!isset($_FILES['comprobante_sni']) || $_FILES['comprobante_sni']['error'] !== UPLOAD_ERR_OK) {
             http_response_code(400); echo json_encode(['error' => 'El comprobante SNI es obligatorio.']); return;
         }
@@ -213,7 +199,6 @@ class RevisorExtensosController {
         ];
         
         if (Usuario::guardarPerfilRevisorExtenso($datos, (int)$area_id)) {
-                // Actualizamos la sesión para reflejar la nueva área si está en uso
                 $_SESSION['area_id'] = (int)$area_id;
                 echo json_encode(['mensaje' => 'Perfil completado con éxito. ¡Gracias por tu colaboración!']);
         } else {
