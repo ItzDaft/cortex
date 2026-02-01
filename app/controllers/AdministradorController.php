@@ -358,7 +358,7 @@ public function enviarCorreoMasivo() {
     ]);
 }
 /**
- * (API) Gets the full details of a summary to display in a modal.
+ * (API) Obtiene los detalles de un resumen específico.
  */
 public function obtenerResumenDetalles($id) {
     header('Content-Type: application/json');

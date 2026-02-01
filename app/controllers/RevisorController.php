@@ -557,7 +557,7 @@ class RevisorController {
                 $situacionTexto = "Días restantes: <strong>{$dias}</strong>";
             }
 
-            $destinatario = $evaluacion['correo_revisor']; // Dato traído en el Paso 1
+            $destinatario = $evaluacion['correo_revisor']; 
             $nombreRevisor = $evaluacion['nombre_revisor'];
             $tituloArticulo = $evaluacion['titulo'];
             
