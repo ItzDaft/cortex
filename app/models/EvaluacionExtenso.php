@@ -47,42 +47,44 @@ class EvaluacionExtenso {
     /**
      * Guarda las respuestas y el veredicto de una evaluación de extenso .
      */
-    public static function guardarEvaluacion(int $evaluacion_id, array $datos): bool {
-        $pdo = Database::conectar();
-        $sql = "UPDATE evaluaciones_extensos SET
-                    respuestas_formulario = :respuestas_formulario,
-                    observaciones_generales = :observaciones_generales,
-                    veredicto = :veredicto,
-                    argumento_rechazo = :argumento_rechazo,
-                    estatus_evaluacion = 'Pendiente de Firma' -- Al guardar final, pasa a firma
-                WHERE id = :evaluacion_id";
+public static function guardarEvaluacion(int $evaluacion_id, array $datos): bool {
+    $pdo = Database::conectar();
+    $sql = "UPDATE evaluaciones_extensos SET
+                respuestas_formulario = :respuestas_formulario,
+                observaciones_generales = :observaciones_generales,
+                veredicto = :veredicto,
+                argumento_rechazo = :argumento_rechazo,
+                estatus_evaluacion = 'Pendiente de Firma',
+                fecha_evaluacion = NOW() 
+            WHERE id = :evaluacion_id";
 
-        $stmt = $pdo->prepare($sql);
-        return $stmt->execute([
-            'respuestas_formulario'   => $datos['respuestas_formulario'],
-            'observaciones_generales' => $datos['observaciones_generales'],
-            'veredicto'               => $datos['veredicto'],
-            'argumento_rechazo'       => $datos['argumento_rechazo'],
-            'evaluacion_id'           => $evaluacion_id
-        ]);
-    }
+    $stmt = $pdo->prepare($sql);
+    return $stmt->execute([
+        'respuestas_formulario'   => $datos['respuestas_formulario'],
+        'observaciones_generales' => $datos['observaciones_generales'],
+        'veredicto'               => $datos['veredicto'],
+        'argumento_rechazo'       => $datos['argumento_rechazo'],
+        'evaluacion_id'           => $evaluacion_id
+    ]);
+}
 
     /**
      * Guarda la ruta del PDF firmado y actualiza el estatus de la evaluación.
      */
-    public static function guardarPdfFirmado(int $evaluacion_id, string $nombreArchivo): bool {
-        $pdo = Database::conectar();
-        $sql = "UPDATE evaluaciones_extensos SET 
-                    pdf_firmado_ruta = :pdf_firmado_ruta,
-                    estatus_evaluacion = 'Validada' -- Cambia a 'Validada' para que el Coordinador la vea
-                WHERE id = :evaluacion_id";
+public static function guardarPdfFirmado(int $evaluacion_id, string $nombreArchivo): bool {
+    $pdo = Database::conectar();
+    $sql = "UPDATE evaluaciones_extensos SET 
+                pdf_firmado_ruta = :pdf_firmado_ruta,
+                estatus_evaluacion = 'Validada',
+                fecha_evaluacion = NOW() 
+            WHERE id = :evaluacion_id";
 
-        $stmt = $pdo->prepare($sql);
-        return $stmt->execute([
-            'pdf_firmado_ruta' => $nombreArchivo,
-            'evaluacion_id'    => $evaluacion_id
-        ]);
-    }
+    $stmt = $pdo->prepare($sql);
+    return $stmt->execute([
+        'pdf_firmado_ruta' => $nombreArchivo,
+        'evaluacion_id'    => $evaluacion_id
+    ]);
+}
 
     /**
      * Busca las evaluaciones que ya fueron firmadas y están pendientes de validación.
@@ -96,7 +98,7 @@ class EvaluacionExtenso {
                 JOIN resumenes r ON e.resumen_id = r.id
                 JOIN usuarios u ON ee.revisor_id = u.id
                 WHERE r.area_id = (SELECT area_id FROM usuarios WHERE id = :coordinador_area_id)
-                AND ee.estatus_evaluacion = 'Pendiente de Validación'"; // Ojo: Verifica si usas 'Validada' o 'Pendiente de Validación' en guardarPdfFirmado
+                AND ee.estatus_evaluacion = 'Pendiente de Validación'"; 
         $stmt = $pdo->prepare($sql);
         $stmt->execute(['coordinador_area_id' => $coordinador_area_id]);
         return $stmt->fetchAll();
