@@ -360,7 +360,8 @@ class RevisorController {
         $extensosPendientesFiltro = Extenso::obtenerPendientesDeFiltroPorArea($coordinadorArea['area_id']);
         $extensosPorAsignar = Extenso::obtenerPendientesDeAsignacionPorArea($coordinadorArea['area_id']);
         $extensosEnRevision = Extenso::obtenerEnRevisionPorArea($coordinadorArea['area_id']);
-        $extensosEnConflicto = Extenso::obtenerEnConflictoPorArea($coordinadorArea['area_id']);
+        //$extensosEnConflicto = Extenso::obtenerEnConflictoPorArea($coordinadorArea['area_id']); // Deprecado
+        $extensosEvaluados = Extenso::obtenerEvaluadosPorArea($coordinadorArea['area_id']);
 
         $revisoresDisponibles = Usuario::buscarRevisoresExtensosPorArea($coordinadorArea['area_id']);
 

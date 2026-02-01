@@ -133,11 +133,10 @@
         </div>
     </div>
 
-    <!-- STAGE D: Conflictos -->
-    <?php if (!empty($extensosEnConflicto)): ?>
-    <div class="card mb-4 border-danger">
-        <div class="card-header bg-danger text-white">
-            <i class="bi bi-exclamation-triangle-fill me-1"></i> Conflictos (Requieren Desempate)
+    <!-- STAGE D: Evaluados -->
+    <div class="card mb-4 border-success">
+        <div class="card-header bg-success text-white">
+            <i class="bi bi-check-circle-fill me-1"></i> Etapa D: Evaluados
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -146,27 +145,58 @@
                         <tr>
                             <th>ID</th>
                             <th>Título del Artículo</th>
+                            <th>Evaluaciones</th>
+                            <th>Estatus Final</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($extensosEnConflicto as $extenso): ?>
-                            <tr id="row-conflicto-<?php echo $extenso['id']; ?>">
-                                <td><?php echo $extenso['id']; ?></td>
-                                <td><?php echo htmlspecialchars($extenso['titulo']); ?></td>
-                                <td>
-                                    <button class="btn btn-sm btn-danger btn-asignar-tercero" data-extenso-id="<?php echo $extenso['version_id']; ?>" data-bs-toggle="modal" data-bs-target="#tercerRevisorModal">
-                                        <i class="bi bi-person-plus"></i> Asignar 3er Revisor
-                                    </button>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
+                        <?php if (empty($extensosEvaluados)): ?>
+                            <tr><td colspan="5" class="text-center text-muted">No hay artículos evaluados.</td></tr>
+                        <?php else: ?>
+                            <?php foreach ($extensosEvaluados as $extenso): ?>
+                                <tr id="row-evaluado-<?php echo $extenso['id']; ?>">
+                                    <td><?php echo $extenso['id']; ?></td>
+                                    <td><?php echo htmlspecialchars($extenso['titulo']); ?></td>
+                                    <td>
+                                        <small>
+                                            <?php 
+                                            $evals = explode('|||', $extenso['detalles_evaluacion']);
+                                            foreach($evals as $evalStr) {
+                                                $parts = explode(':::', $evalStr);
+                                                if(count($parts) === 2) {
+                                                    echo '<strong>' . htmlspecialchars($parts[0]) . '</strong>: ' . htmlspecialchars($parts[1]) . '<br>';
+                                                }
+                                            }
+                                            ?>
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <span class="badge <?php 
+                                            if($extenso['estatus_extenso'] == 'Rechazado') echo 'bg-danger'; 
+                                            elseif($extenso['estatus_extenso'] == 'Conflicto') echo 'bg-warning text-dark';
+                                            else echo 'bg-success'; 
+                                        ?>">
+                                            <?php echo htmlspecialchars($extenso['estatus_extenso']); ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <?php if ($extenso['estatus_extenso'] === 'Conflicto'): ?>
+                                            <button class="btn btn-sm btn-danger btn-asignar-tercero" data-extenso-id="<?php echo $extenso['version_id']; ?>" data-bs-toggle="modal" data-bs-target="#tercerRevisorModal">
+                                                <i class="bi bi-person-plus"></i> Asignar 3er Revisor
+                                            </button>
+                                        <?php else: ?>
+                                            <span class="text-muted">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
-    <?php endif; ?>
 </div>
 
 <!-- --- MODALES --- -->

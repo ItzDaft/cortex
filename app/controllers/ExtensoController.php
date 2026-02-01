@@ -56,6 +56,21 @@ public function reenviar($extenso_id) {
 
     $extenso = Extenso::obtenerDetallesParaAutor($extenso_id);
 
+    // Calcular fecha límite para reenvío (15 días)
+    $fechaLimite = Extenso::calcularFechaLimite($extenso_id);
+    $diasRestantes = 0;
+    $plazoVencido = false;
+
+    if ($fechaLimite) {
+        $limite = new DateTime($fechaLimite);
+        $hoy = new DateTime();
+        if ($hoy > $limite) {
+            $plazoVencido = true;
+        } else {
+            $diasRestantes = $hoy->diff($limite)->days;
+        }
+    }
+
     CSRFHelper::generateToken();
     require_once BACKEND_ROOT . '/app/views/layout/header.php';
     require_once BACKEND_ROOT . '/app/views/extenso/reenviar.php';
@@ -69,6 +84,14 @@ public function procesarReenvio($extenso_id) {
     header('Content-Type: application/json');
     if (!isset($_SESSION['usuario_id'])) {
         http_response_code(403); echo json_encode(['error' => 'Permisos insuficientes.']); return;
+    }
+
+    // Validar fecha límite
+    $fechaLimite = Extenso::calcularFechaLimite($extenso_id);
+    if ($fechaLimite && new DateTime() > new DateTime($fechaLimite)) {
+         http_response_code(403); 
+         echo json_encode(['error' => 'El plazo de 15 días para enviar correcciones ha vencido.']); 
+         return;
     }
 
     if (!isset($_FILES['archivo_extenso']) || $_FILES['archivo_extenso']['error'] !== UPLOAD_ERR_OK) {
