@@ -250,7 +250,7 @@ class Extenso {
                     r.titulo,
                     e.estatus_extenso,
                     ev.id as version_id,
-                    GROUP_CONCAT(CONCAT('<strong>', u.nombre_completo, '</strong>: ', IFNULL(ee.veredicto, 'Pendiente')) SEPARATOR '<br>') as detalles_evaluacion
+                    GROUP_CONCAT(CONCAT(u.nombre_completo, ':::', IFNULL(ee.veredicto, 'Pendiente')) SEPARATOR '|||') as detalles_evaluacion
                 FROM extensos e
                 JOIN resumenes r ON e.resumen_id = r.id
                 JOIN extenso_versiones ev ON e.id = ev.extenso_id
@@ -259,7 +259,7 @@ class Extenso {
                 LEFT JOIN usuarios u ON ee.revisor_id = u.id
                 WHERE r.area_id = :area_id
                 AND e.estatus_extenso IN ('Aceptado Final', 'Aceptado con Correcciones', 'Rechazado', 'Conflicto')
-                GROUP BY e.id
+                GROUP BY e.id, ev.id
                 ORDER BY e.id DESC";
 
         $stmt = $pdo->prepare($sql);

@@ -158,7 +158,19 @@
                                 <tr id="row-evaluado-<?php echo $extenso['id']; ?>">
                                     <td><?php echo $extenso['id']; ?></td>
                                     <td><?php echo htmlspecialchars($extenso['titulo']); ?></td>
-                                    <td><small><?php echo $extenso['detalles_evaluacion']; ?></small></td>
+                                    <td>
+                                        <small>
+                                            <?php
+                                            $evals = explode('|||', $extenso['detalles_evaluacion']);
+                                            foreach($evals as $evalStr) {
+                                                $parts = explode(':::', $evalStr);
+                                                if(count($parts) === 2) {
+                                                    echo '<strong>' . htmlspecialchars($parts[0]) . '</strong>: ' . htmlspecialchars($parts[1]) . '<br>';
+                                                }
+                                            }
+                                            ?>
+                                        </small>
+                                    </td>
                                     <td>
                                         <span class="badge <?php
                                             if($extenso['estatus_extenso'] == 'Rechazado') echo 'bg-danger';
