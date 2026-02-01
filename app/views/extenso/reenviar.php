@@ -5,6 +5,24 @@
         
         <div id="mensaje-envio"></div>
 
+        <?php if (isset($plazoVencido) && $plazoVencido): ?>
+            <div class="alert alert-danger text-center shadow mb-4">
+                <h4 class="alert-heading"><i class="bi bi-clock-history"></i> Plazo Vencido</h4>
+                <p>El plazo de 15 días para enviar la nueva versión ha expirado.</p>
+                <hr>
+                <p class="mb-0">Fecha límite: <strong><?php echo date('d/m/Y', strtotime($fechaLimite)); ?></strong></p>
+                <p>No es posible realizar el envío.</p>
+            </div>
+        <?php elseif (isset($diasRestantes) && isset($fechaLimite)): ?>
+            <div class="alert alert-info d-flex align-items-center mb-4 shadow-sm" role="alert">
+                <i class="bi bi-info-circle-fill fs-4 me-2"></i>
+                <div>
+                    Tienes hasta el <strong><?php echo date('d/m/Y', strtotime($fechaLimite)); ?></strong> para enviar tu corrección.
+                    (Días restantes: <strong><?php echo $diasRestantes; ?></strong>)
+                </div>
+            </div>
+        <?php endif; ?>
+
         <div class="alert alert-danger text-center" style="font-size:1.1rem; font-weight:bold;">
             <span style="font-size:1.3rem; color:#b30000; display:block; margin-bottom:10px;">¡RECORDATORIO! Para evitar otro rechazo:</span>
             <ul class="text-start" style="color:#b30000; font-size:1rem;">
@@ -55,6 +73,7 @@
             </div>
         </div>
 
+        <?php if (!isset($plazoVencido) || !$plazoVencido): ?>
         <div class="card">
             <div class="card-body">
                 <form id="formReenviarExtenso" enctype="multipart/form-data">
@@ -71,6 +90,7 @@
                 </form>
             </div>
         </div>
+        <?php endif; ?>
     </div>
 </div>
 

@@ -238,4 +238,57 @@ class Extenso {
         $stmt->execute(['extenso_id' => $extenso_id]);
         return $stmt->fetch();
     }
+
+    /**
+     * Obtiene los extensos que ya han sido evaluados (Etapa D) para un área.
+     * Incluye Aceptados, Rechazados y en Conflicto.
+     */
+    public static function obtenerEvaluadosPorArea(int $area_id): array {
+        $pdo = Database::conectar();
+        $sql = "SELECT
+                    e.id,
+                    r.titulo,
+                    e.estatus_extenso,
+                    ev.id as version_id,
+                    GROUP_CONCAT(CONCAT('<strong>', u.nombre_completo, '</strong>: ', IFNULL(ee.veredicto, 'Pendiente')) SEPARATOR '<br>') as detalles_evaluacion
+                FROM extensos e
+                JOIN resumenes r ON e.resumen_id = r.id
+                JOIN extenso_versiones ev ON e.id = ev.extenso_id
+                    AND ev.intento = (SELECT MAX(v.intento) FROM extenso_versiones v WHERE v.extenso_id = e.id)
+                LEFT JOIN evaluaciones_extensos ee ON ev.id = ee.extenso_version_id
+                LEFT JOIN usuarios u ON ee.revisor_id = u.id
+                WHERE r.area_id = :area_id
+                AND e.estatus_extenso IN ('Aceptado Final', 'Aceptado con Correcciones', 'Rechazado', 'Conflicto')
+                GROUP BY e.id
+                ORDER BY e.id DESC";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute(['area_id' => $area_id]);
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Calcula la fecha límite (15 días después de la última evaluación de la versión actual).
+     */
+    public static function calcularFechaLimite(int $extenso_id): ?string {
+        $pdo = Database::conectar();
+        // Obtener ID de la última versión
+        $sql = "SELECT id FROM extenso_versiones WHERE extenso_id = :extenso_id ORDER BY intento DESC LIMIT 1";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute(['extenso_id' => $extenso_id]);
+        $version_id = $stmt->fetchColumn();
+
+        if (!$version_id) return null;
+
+        // Obtener la fecha de evaluación más reciente de esa versión
+        $sql = "SELECT MAX(fecha_evaluacion) FROM evaluaciones_extensos
+                WHERE extenso_version_id = :version_id AND estatus_evaluacion = 'Validada'";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute(['version_id' => $version_id]);
+        $fecha_eval = $stmt->fetchColumn();
+
+        if (!$fecha_eval) return null;
+
+        return date('Y-m-d H:i:s', strtotime($fecha_eval . ' + 15 days'));
+    }
 }

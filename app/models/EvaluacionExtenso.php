@@ -282,19 +282,25 @@ public static function actualizarRevisores(int $extenso_version_id, array $revis
         $estatus_final_extenso = '';
 
         if ($numEvaluaciones >= 3) {
-            if ($rechazados >= 2) $estatus_final_extenso = 'Rechazado';
-            elseif ($aceptados >= 2) $estatus_final_extenso = 'Aceptado Final';
-            elseif ($conCorrecciones >= 2) $estatus_final_extenso = 'Aceptado con Correcciones';
-            else $estatus_final_extenso = 'Aceptado con Correcciones';
+            // Si hay 3 revisores, es un desempate.
+            // Si el 3er revisor (o la suma total) da 2 rechazos -> Rechazado.
+            // Si el 3er revisor aprueba (sea favorable o correcciones) -> Aceptado con Correcciones (para permitir subida).
+            if ($rechazados >= 2) {
+                $estatus_final_extenso = 'Rechazado';
+            } else {
+                $estatus_final_extenso = 'Aceptado con Correcciones';
+            }
         } 
         elseif ($numEvaluaciones == 2) {
             if ($rechazados == 2) {
                 $estatus_final_extenso = 'Rechazado';
+            } elseif ($rechazados == 1) {
+                // 1 Rechazo + 1 (Favorable o Correcciones) -> Conflicto
+                $estatus_final_extenso = 'Conflicto';
             } elseif ($aceptados == 2) {
                 $estatus_final_extenso = 'Aceptado Final';
-            } elseif ($aceptados == 1 && $rechazados == 1) {
-                $estatus_final_extenso = 'Conflicto';
             } else {
+                // Combinaciones de Favorable y Correcciones (sin rechazos)
                 $estatus_final_extenso = 'Aceptado con Correcciones';
             }
         }
