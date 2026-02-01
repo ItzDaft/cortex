@@ -459,7 +459,6 @@ class RevisorController {
                 res.titulo AS titulo_articulo, 
                 ver.archivo_ruta AS archivo_extenso_ruta,
                 rev.nombre_completo AS nombre_revisor,
-                rev.correo AS correo_revisor
             FROM evaluaciones_extensos ev
             INNER JOIN extenso_versiones ver ON ev.extenso_version_id = ver.id
             INNER JOIN extensos ext ON ver.extenso_id = ext.id
@@ -474,9 +473,7 @@ class RevisorController {
 
         foreach ($asignacionesExtensos as &$asig) {
             if ($asig['estatus_evaluacion'] === 'Rechazada por Coordinador') {
-                // Ya tiene el estatus correcto desde la BD
             } elseif (!empty($asig['argumento_rechazo']) && $asig['veredicto'] !== 'No Publicable') {
-                // Solo si hay argumento y NO es rechazo del revisor, asumimos rechazo de coordinador (fallback)
                 $asig['estatus_evaluacion'] = 'Rechazada por Coordinador';
             } elseif (empty($asig['estatus_evaluacion']) || $asig['estatus_evaluacion'] === 'Pendiente') {
                 if (!empty($asig['veredicto']) && $asig['veredicto'] !== 'Pendiente') {
