@@ -407,11 +407,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // 3. Filtrar Revisores (Ocultar los que ya participaron)
             const todosLosRevisores = document.querySelectorAll('#tercerRevisorForm .container-revisor');
+            // Creamos un Set de nombres normalizados para comparación robusta
+            const nombresExcluir = new Set(info.contexto.map(c => c.nombre.trim().toLowerCase()));
+
             todosLosRevisores.forEach(el => {
                 const id = parseInt(el.dataset.revisorId);
+                const nombreRevisor = el.querySelector('label strong').textContent.trim().toLowerCase();
                 const input = el.querySelector('input');
 
-                if (info.revisores_excluir.includes(id)) {
+                // Filtramos por ID (si existe) O por Nombre (fallback robusto)
+                const excluirPorId = info.revisores_excluir.includes(id);
+                const excluirPorNombre = nombresExcluir.has(nombreRevisor);
+
+                if (excluirPorId || excluirPorNombre) {
                     el.classList.add('d-none'); // Ocultar visualmente
                     if(input) input.disabled = true; // Deshabilitar por seguridad
                 } else {
