@@ -272,7 +272,11 @@ public static function actualizarRevisores(int $extenso_version_id, array $revis
 
         if ($numEvaluaciones < 2) return;
 
-        $veredictos = array_column($evaluaciones, 'veredicto');
+        // Normalizamos los veredictos para evitar errores por espacios en blanco
+        $veredictos = array_map(function($ev) {
+            return trim($ev['veredicto']);
+        }, $evaluaciones);
+
         $conteos = array_count_values($veredictos);
         
         $aceptados = $conteos['Favorable y Publicable'] ?? 0;
@@ -282,9 +286,7 @@ public static function actualizarRevisores(int $extenso_version_id, array $revis
         $estatus_final_extenso = '';
 
         if ($numEvaluaciones >= 3) {
-            // Si hay 3 revisores, es un desempate.
-            // Si el 3er revisor (o la suma total) da 2 rechazos -> Rechazado.
-            // Si el 3er revisor aprueba (sea favorable o correcciones) -> Aceptado con Correcciones (para permitir subida).
+            // Desempate con 3er revisor
             if ($rechazados >= 2) {
                 $estatus_final_extenso = 'Rechazado';
             } else {
@@ -295,12 +297,14 @@ public static function actualizarRevisores(int $extenso_version_id, array $revis
             if ($rechazados == 2) {
                 $estatus_final_extenso = 'Rechazado';
             } elseif ($rechazados == 1) {
-                // 1 Rechazo + 1 (Favorable o Correcciones) -> Conflicto
+                // CASO 4 y 5: 1 Rechazo + 1 (Favorable o Correcciones) -> Conflicto
                 $estatus_final_extenso = 'Conflicto';
             } elseif ($aceptados == 2) {
+                // CASO 1: Favorable y Publicable + Favorable y Publicable
                 $estatus_final_extenso = 'Aceptado Final';
             } else {
-                // Combinaciones de Favorable y Correcciones (sin rechazos)
+                // CASO 2: Favorable con Correcciones + Favorable y Publicable
+                // CASO 3: Favorable con Correcciones + Favorable con Correcciones
                 $estatus_final_extenso = 'Aceptado con Correcciones';
             }
         }
