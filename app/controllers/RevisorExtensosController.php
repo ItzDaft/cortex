@@ -112,7 +112,14 @@ class RevisorExtensosController {
         
         if (move_uploaded_file($_FILES['pdf_firmado']['tmp_name'], $dir . $name)) {
             if (EvaluacionExtenso::guardarPdfFirmado($evaluacion_id, $name)) {
-                echo json_encode(['mensaje' => 'Documento firmado subido. Pendiente de validación.']);
+
+                // TRIGGER AUTOMÁTICO DE VERIFICACIÓN DE CONSENSO
+                $evaluacion = EvaluacionExtenso::buscarPorId($evaluacion_id);
+                if ($evaluacion) {
+                    EvaluacionExtenso::verificarConsenso($evaluacion['extenso_version_id']);
+                }
+
+                echo json_encode(['mensaje' => 'Documento firmado subido y validado.']);
             } else {
                 http_response_code(500); echo json_encode(['error' => 'Error BD.']);
             }
