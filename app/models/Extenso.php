@@ -250,7 +250,7 @@ class Extenso {
                     r.titulo, 
                     e.estatus_extenso,
                     ev.id as version_id,
-                    GROUP_CONCAT(CONCAT(u.nombre_completo, ':::', IFNULL(ee.veredicto, 'Pendiente')) SEPARATOR '|||') as detalles_evaluacion
+                    GROUP_CONCAT(CONCAT(u.nombre_completo, ':::', IFNULL(ee.veredicto, 'Pendiente'), ':::', u.id) SEPARATOR '|||') as detalles_evaluacion
                 FROM extensos e
                 JOIN resumenes r ON e.resumen_id = r.id
                 JOIN extenso_versiones ev ON e.id = ev.extenso_id 

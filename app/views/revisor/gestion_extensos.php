@@ -162,12 +162,37 @@
                                         <small>
                                             <?php 
                                             $evals = explode('|||', $extenso['detalles_evaluacion']);
+                                            $revisores_ids_asignados = [];
+                                            $contexto_evaluacion = []; // Para pasar al modal
+
                                             foreach($evals as $evalStr) {
                                                 $parts = explode(':::', $evalStr);
-                                                if(count($parts) === 2) {
-                                                    echo '<strong>' . htmlspecialchars($parts[0]) . '</strong>: ' . htmlspecialchars($parts[1]) . '<br>';
+                                                if(count($parts) >= 2) {
+                                                    $nombre = $parts[0];
+                                                    $veredicto = $parts[1];
+                                                    $id_rev = $parts[2] ?? 0;
+
+                                                    if($id_rev) $revisores_ids_asignados[] = $id_rev;
+
+                                                    // Sanitizamos aquí para evitar XSS al inyectar con JS
+                                                    $contexto_evaluacion[] = [
+                                                        'nombre' => htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8'),
+                                                        'veredicto' => htmlspecialchars($veredicto, ENT_QUOTES, 'UTF-8')
+                                                    ];
+
+                                                    echo '<strong>' . htmlspecialchars($nombre) . '</strong>: ' . htmlspecialchars($veredicto) . '<br>';
                                                 }
                                             }
+
+                                            $num_evaluaciones = count($revisores_ids_asignados);
+                                            $ya_tiene_tercero = ($num_evaluaciones >= 3);
+
+                                            // Preparamos datos JSON para el botón
+                                            $datos_tercero = json_encode([
+                                                'titulo' => $extenso['titulo'],
+                                                'revisores_excluir' => $revisores_ids_asignados,
+                                                'contexto' => $contexto_evaluacion
+                                            ]);
                                             ?>
                                         </small>
                                     </td>
@@ -181,10 +206,16 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <?php if ($extenso['estatus_extenso'] === 'Conflicto'): ?>
-                                            <button class="btn btn-sm btn-danger btn-asignar-tercero" data-extenso-id="<?php echo $extenso['version_id']; ?>" data-bs-toggle="modal" data-bs-target="#tercerRevisorModal">
+                                        <?php if ($extenso['estatus_extenso'] === 'Conflicto' && !$ya_tiene_tercero): ?>
+                                            <button class="btn btn-sm btn-danger btn-asignar-tercero"
+                                                data-extenso-id="<?php echo $extenso['version_id']; ?>"
+                                                data-info='<?php echo htmlspecialchars($datos_tercero, ENT_QUOTES, 'UTF-8'); ?>'
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#tercerRevisorModal">
                                                 <i class="bi bi-person-plus"></i> Asignar 3er Revisor
                                             </button>
+                                        <?php elseif ($extenso['estatus_extenso'] === 'Conflicto' && $ya_tiene_tercero): ?>
+                                            <span class="text-muted small">3er Revisor Asignado</span>
                                         <?php else: ?>
                                             <span class="text-muted">-</span>
                                         <?php endif; ?>
@@ -286,12 +317,20 @@
     <div class="modal-content">
       <div class="modal-header bg-danger text-white"><h5 class="modal-title">Desempate</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
+        <!-- SECCION CONTEXTO -->
+        <div class="alert alert-light border mb-3">
+            <h6 id="modal-tercero-titulo" class="text-danger fw-bold mb-2">Artículo: ...</h6>
+            <div id="modal-tercero-contexto" class="small text-muted ps-2 border-start border-danger border-3">
+                <!-- Se llena con JS -->
+            </div>
+        </div>
+
         <p>Selecciona <strong>un</strong> revisor para desempatar:</p>
         <form id="tercerRevisorForm">
             <input type="hidden" id="extenso_version_id_tercero">
             <div style="max-height: 300px; overflow-y: auto;">
                 <?php foreach ($revisoresDisponibles as $rev): ?>
-                <div class="form-check py-1 border-bottom">
+                <div class="form-check py-1 border-bottom container-revisor" data-revisor-id="<?php echo $rev['id']; ?>">
                   <input class="form-check-input" type="radio" name="revisor_id" value="<?php echo $rev['id']; ?>" id="rev-t-<?php echo $rev['id']; ?>" required>
                   <label class="form-check-label w-100" for="rev-t-<?php echo $rev['id']; ?>">
                     <strong><?php echo htmlspecialchars($rev['nombre_completo']); ?></strong>
@@ -347,6 +386,38 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (t.classList.contains('btn-asignar-tercero')) {
             document.getElementById('extenso_version_id_tercero').value = t.dataset.extensoId;
+
+            // Lógica para poblar el modal con datos contextuales
+            const info = JSON.parse(t.dataset.info);
+
+            // 1. Título
+            document.getElementById('modal-tercero-titulo').textContent = info.titulo;
+
+            // 2. Contexto (Revisores previos)
+            const ctxContainer = document.getElementById('modal-tercero-contexto');
+            ctxContainer.innerHTML = '';
+            info.contexto.forEach(c => {
+                const div = document.createElement('div');
+                div.innerHTML = `<strong>${c.nombre}</strong>: ${c.veredicto}`;
+                ctxContainer.appendChild(div);
+            });
+
+            // 3. Filtrar Revisores (Ocultar los que ya participaron)
+            const todosLosRevisores = document.querySelectorAll('#tercerRevisorForm .container-revisor');
+            todosLosRevisores.forEach(el => {
+                const id = parseInt(el.dataset.revisorId);
+                const input = el.querySelector('input');
+
+                if (info.revisores_excluir.includes(id)) {
+                    el.classList.add('d-none'); // Ocultar visualmente
+                    if(input) input.disabled = true; // Deshabilitar por seguridad
+                } else {
+                    el.classList.remove('d-none');
+                    if(input) input.disabled = false;
+                }
+                // Resetear selección
+                if(input) input.checked = false;
+            });
         }
 
         // 2. Acciones Directas (Confirmación)
