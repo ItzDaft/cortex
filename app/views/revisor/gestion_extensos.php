@@ -165,9 +165,13 @@
                                             $revisores_ids_asignados = [];
                                             $contexto_evaluacion = []; // Para pasar al modal
 
+                                            $num_evaluaciones = 0;
+
                                             foreach($evals as $evalStr) {
                                                 $parts = explode(':::', $evalStr);
                                                 if(count($parts) >= 2) {
+                                                    $num_evaluaciones++; // Contamos cada entrada válida (Nombre + Veredicto)
+
                                                     $nombre = $parts[0];
                                                     $veredicto = $parts[1];
                                                     $id_rev = $parts[2] ?? 0;
@@ -184,7 +188,6 @@
                                                 }
                                             }
 
-                                            $num_evaluaciones = count($revisores_ids_asignados);
                                             $ya_tiene_tercero = ($num_evaluaciones >= 3);
 
                                             // Preparamos datos JSON para el botón
