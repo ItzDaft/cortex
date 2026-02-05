@@ -102,7 +102,7 @@
                             <label for="comprobante_sni" class="form-label">Comprobante SNI (PDF)</label>
                             <?php if (!empty($perfil_revisor['comprobante_sni_ruta'])): ?>
                                 <div class="mb-2">
-                                    <small class="text-success"><i class="fas fa-check-circle"></i> Archivo actual: <a href="<?php echo BASE_URL . 'uploads/revisores_perfil/' . $perfil_revisor['comprobante_sni_ruta']; ?>" target="_blank">Ver archivo</a></small>
+                                    <small class="text-success"><i class="fas fa-check-circle"></i> Archivo actual: <a href="<?php echo BASE_URL . 'public/uploads/revisores_perfil/' . $perfil_revisor['comprobante_sni_ruta']; ?>" target="_blank">Ver archivo</a></small>
                                 </div>
                             <?php endif; ?>
                             <input class="form-control" type="file" id="comprobante_sni" name="comprobante_sni" accept=".pdf">
@@ -113,7 +113,7 @@
                             <label for="foto" class="form-label">Fotografía</label>
                             <?php if (!empty($perfil_revisor['foto_ruta'])): ?>
                                 <div class="mb-2 d-flex align-items-center">
-                                    <img src="<?php echo BASE_URL . 'uploads/revisores_perfil/' . $perfil_revisor['foto_ruta']; ?>" alt="Foto actual" class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                    <img src="<?php echo BASE_URL . 'public/uploads/revisores_perfil/' . $perfil_revisor['foto_ruta']; ?>" alt="Foto actual" class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
                                     <small class="text-success">Foto actual cargada</small>
                                 </div>
                             <?php endif; ?>

@@ -167,7 +167,8 @@ class RevisorExtensosController {
         
         $comprobante_sni_ruta = null;
         $foto_ruta = null;
-        $directorio_revisores = BACKEND_ROOT . '/uploads/revisores_perfil/';
+        // CHANGE: Move uploads to public/uploads/ so they are accessible by web server
+        $directorio_revisores = BACKEND_ROOT . '/public/uploads/revisores_perfil/';
         if (!is_dir($directorio_revisores)) { mkdir($directorio_revisores, 0777, true); }
 
         if (!isset($_FILES['comprobante_sni']) || $_FILES['comprobante_sni']['error'] !== UPLOAD_ERR_OK) {
@@ -243,7 +244,8 @@ class RevisorExtensosController {
 
         $comprobante_sni_ruta = null;
         $foto_ruta = null;
-        $directorio_revisores = BACKEND_ROOT . '/uploads/revisores_perfil/';
+        // CHANGE: Move uploads to public/uploads/ so they are accessible by web server
+        $directorio_revisores = BACKEND_ROOT . '/public/uploads/revisores_perfil/';
         if (!is_dir($directorio_revisores)) { mkdir($directorio_revisores, 0755, true); }
 
         if (isset($_FILES['comprobante_sni']) && $_FILES['comprobante_sni']['error'] === UPLOAD_ERR_OK) {
