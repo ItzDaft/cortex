@@ -223,4 +223,81 @@ class RevisorExtensosController {
         if(EvaluacionExtenso::guardarBorrador($evaluacion_id, $datos)) echo json_encode(['mensaje'=>'Borrador guardado']);
         else { http_response_code(500); echo json_encode(['error'=>'Error']); }
     }
+
+    public function actualizarPerfil() {
+        header('Content-Type: application/json');
+        if (!isset($_SESSION['usuario_id']) || !in_array('Revisor de Extensos', $_SESSION['usuario_roles'])) {
+            http_response_code(403); echo json_encode(['error' => 'Permisos insuficientes.']); return;
+        }
+
+        if (!isset($_POST['csrf_token']) || !CSRFHelper::verifyToken($_POST['csrf_token'])) {
+            http_response_code(403); echo json_encode(['error' => 'Token de seguridad inválido. Recarga la página.']); return;
+        }
+        
+        $campos_requeridos = ['grado_academico', 'afiliacion_institucional', 'cargo_actual', 'area_especialidad'];
+        foreach ($campos_requeridos as $campo) {
+            if (empty($_POST[$campo])) {
+                http_response_code(400); echo json_encode(['error' => 'Por favor completa todos los campos obligatorios.']); return;
+            }
+        }
+
+        $comprobante_sni_ruta = null;
+        $foto_ruta = null;
+        $directorio_revisores = BACKEND_ROOT . '/uploads/revisores_perfil/';
+        if (!is_dir($directorio_revisores)) { mkdir($directorio_revisores, 0755, true); }
+
+        if (isset($_FILES['comprobante_sni']) && $_FILES['comprobante_sni']['error'] === UPLOAD_ERR_OK) {
+            $archivo_sni = $_FILES['comprobante_sni'];
+            
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime_type = finfo_file($finfo, $archivo_sni['tmp_name']);
+            finfo_close($finfo);
+
+            if ($mime_type !== 'application/pdf') {
+                http_response_code(400); echo json_encode(['error' => 'El comprobante SNI debe ser un archivo PDF válido.']); return;
+            }
+            $extension = pathinfo($archivo_sni['name'], PATHINFO_EXTENSION);
+            $comprobante_sni_ruta = 'sni_' . $_SESSION['usuario_id'] . '_' . time() . '.' . $extension;
+            if (!move_uploaded_file($archivo_sni['tmp_name'], $directorio_revisores . $comprobante_sni_ruta)) {
+                http_response_code(500); echo json_encode(['error' => 'Error al subir el comprobante SNI.']); return;
+            }
+        }
+
+        if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
+            $archivo_foto = $_FILES['foto'];
+            
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime_type = finfo_file($finfo, $archivo_foto['tmp_name']);
+            finfo_close($finfo);
+
+            $tipos_permitidos = ['image/jpeg', 'image/png'];
+            if (!in_array($mime_type, $tipos_permitidos)) {
+                http_response_code(400); echo json_encode(['error' => 'La foto debe ser un archivo JPG o PNG válido.']); return;
+            }
+            $extension = pathinfo($archivo_foto['name'], PATHINFO_EXTENSION);
+            $foto_ruta = 'foto_' . $_SESSION['usuario_id'] . '_' . time() . '.' . $extension;
+            if (!move_uploaded_file($archivo_foto['tmp_name'], $directorio_revisores . $foto_ruta)) {
+                 http_response_code(500); echo json_encode(['error' => 'Error al subir la fotografía.']); return;
+            }
+        }
+
+        $datos = [
+            'usuario_id'                => $_SESSION['usuario_id'],
+            'grado_academico'           => $_POST['grado_academico'],
+            'afiliacion_institucional'  => $_POST['afiliacion_institucional'],
+            'cargo_actual'              => $_POST['cargo_actual'],
+            'area_especialidad'         => $_POST['area_especialidad'],
+            'orcid'                     => $_POST['orcid'] ?? null,
+            'google_scholar_id'         => $_POST['google_scholar_id'] ?? null,
+            'comprobante_sni_ruta'      => $comprobante_sni_ruta,
+            'foto_ruta'                 => $foto_ruta
+        ];
+        
+        if (Usuario::actualizarPerfilRevisorExtenso($datos)) {
+            echo json_encode(['mensaje' => 'Tu perfil de revisor ha sido actualizado exitosamente.']);
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => 'No se pudo actualizar el perfil. Intenta nuevamente.']);
+        }
+    }
 }

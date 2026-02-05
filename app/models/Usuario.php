@@ -310,6 +310,34 @@ public static function buscarRevisorDisponiblePorArea(int $area_id) {
             return false;
         }
     }
+
+    /**
+     * Actualiza el perfil detallado de un Revisor de Extensos, sin modificar el área.
+     * @param array $datos Los datos del perfil a actualizar.
+     * @return bool True si la operación fue exitosa.
+     */
+    public static function actualizarPerfilRevisorExtenso(array $datos): bool {
+        $pdo = Database::conectar();
+        try {
+            $sql = "UPDATE revisores_extensos_perfil SET
+                        grado_academico = :grado_academico,
+                        afiliacion_institucional = :afiliacion_institucional,
+                        cargo_actual = :cargo_actual,
+                        area_especialidad = :area_especialidad,
+                        orcid = :orcid,
+                        google_scholar_id = :google_scholar_id,
+                        comprobante_sni_ruta = COALESCE(:comprobante_sni_ruta, comprobante_sni_ruta),
+                        foto_ruta = COALESCE(:foto_ruta, foto_ruta)
+                    WHERE usuario_id = :usuario_id";
+            
+            $stmt = $pdo->prepare($sql);
+            return $stmt->execute($datos);
+        } catch (PDOException $e) {
+            error_log($e->getMessage());
+            return false;
+        }
+    }
+
     /**
      * Obtiene el perfil detallado de un revisor (Útil para llenar el formulario de edición).
      */
