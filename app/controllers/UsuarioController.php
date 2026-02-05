@@ -132,6 +132,20 @@ public function perfil() {
     CSRFHelper::generateToken();
     $usuario = Usuario::buscarPorId($_SESSION['usuario_id']);
     
+    $perfil_revisor = null;
+    $nombre_area = null;
+    $roles_usuario = Usuario::obtenerRoles($_SESSION['usuario_id']);
+
+    if (in_array('Revisor de Extensos', $roles_usuario)) {
+        $perfil_revisor = Usuario::obtenerPerfilRevisorExtenso($_SESSION['usuario_id']);
+        if (!empty($usuario['area_id'])) {
+            $area = AreaTematica::buscarPorId($usuario['area_id']);
+            if ($area) {
+                $nombre_area = $area['nombre_area'];
+            }
+        }
+    }
+
     require_once BACKEND_ROOT . '/app/views/layout/header.php';
     require_once BACKEND_ROOT . '/app/views/usuario/perfil.php';
     require_once BACKEND_ROOT . '/app/views/layout/footer.php';
