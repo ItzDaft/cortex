@@ -4,6 +4,7 @@ class UsuarioController {
 
 public function registrar() {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        if (ob_get_length()) ob_clean();
         header('Content-Type: application/json');
         $datos = json_decode(file_get_contents('php://input'), true);
 
@@ -81,6 +82,7 @@ public function registrar() {
      */
 public function login() {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        if (ob_get_length()) ob_clean();
         header('Content-Type: application/json');
         $datos = json_decode(file_get_contents('php://input'), true);
 
@@ -155,6 +157,7 @@ public function perfil() {
  * (API) Actualiza los datos del perfil (nombre, institución).
  */
 public function actualizarPerfil() {
+    if (ob_get_length()) ob_clean();
     header('Content-Type: application/json');
     if (!isset($_SESSION['usuario_id'])) {
         http_response_code(401); echo json_encode(['error' => 'Acceso no autorizado.']); return;
@@ -185,6 +188,7 @@ public function actualizarPerfil() {
  * (API) Cambia la contraseña del usuario.
  */
 public function cambiarContrasena() {
+    if (ob_get_length()) ob_clean();
     header('Content-Type: application/json');
     if (!isset($_SESSION['usuario_id'])) {
         http_response_code(401); echo json_encode(['error' => 'Acceso no autorizado.']); return;

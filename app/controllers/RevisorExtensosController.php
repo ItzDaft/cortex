@@ -50,7 +50,10 @@ class RevisorExtensosController {
     }
 
     public function procesarEvaluacion($evaluacion_id) {
+        // Clear any previous output (warnings/notices) to ensure valid JSON response
+        if (ob_get_length()) ob_clean();
         header('Content-Type: application/json');
+
         if (!isset($_SESSION['usuario_id'])) { http_response_code(403); echo json_encode(['error' => 'Permisos insuficientes.']); return; }
 
         $datos_post = $_POST;
@@ -93,7 +96,9 @@ class RevisorExtensosController {
     }
 
     public function subirPdfFirmado($evaluacion_id) {
+        if (ob_get_length()) ob_clean();
         header('Content-Type: application/json');
+
         if (!isset($_SESSION['usuario_id'])) { http_response_code(403); echo json_encode(['error' => 'Permisos.']); return; }
         
         if (!isset($_FILES['pdf_firmado']) || $_FILES['pdf_firmado']['error'] !== UPLOAD_ERR_OK) {
@@ -144,7 +149,10 @@ class RevisorExtensosController {
     }
     
     public function guardarPerfil() {
+        // Discard any previous output (e.g. PHP warnings/notices)
+        if (ob_get_length()) ob_clean();
         header('Content-Type: application/json');
+
         if (!isset($_SESSION['usuario_id']) || !in_array('Revisor de Extensos', $_SESSION['usuario_roles'])) {
             http_response_code(403); echo json_encode(['error' => 'Permisos insuficientes.']); return;
         }
@@ -165,36 +173,61 @@ class RevisorExtensosController {
         }
 
         $area_id = $_POST['area_id'] ?? null;
+        // Verify area_id is numeric and valid
         if (!ctype_digit((string)$area_id) || !AreaTematica::buscarPorId((int)$area_id)) {
             http_response_code(400); echo json_encode(['error' => 'Área temática inválida.']); return;
         }
         
         $comprobante_sni_ruta = null;
         $foto_ruta = null;
-        // CHANGE: Move uploads to public/uploads/ so they are accessible by web server
+
+        // Define directory path
         $directorio_revisores = BACKEND_ROOT . '/public/uploads/revisores_perfil/';
-        if (!is_dir($directorio_revisores)) { mkdir($directorio_revisores, 0777, true); }
+
+        // Ensure directory exists
+        if (!is_dir($directorio_revisores)) {
+            // Suppress warnings with @ to prevent breaking JSON response if mkdir fails due to race condition
+            @mkdir($directorio_revisores, 0755, true);
+        }
 
         if (!isset($_FILES['comprobante_sni']) || $_FILES['comprobante_sni']['error'] !== UPLOAD_ERR_OK) {
             http_response_code(400); echo json_encode(['error' => 'El comprobante SNI es obligatorio.']); return;
         }
         $archivo_sni = $_FILES['comprobante_sni'];
-        if ($archivo_sni['type'] !== 'application/pdf') {
+
+        // Use finfo to check mime type reliably
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime_type = finfo_file($finfo, $archivo_sni['tmp_name']);
+        finfo_close($finfo);
+
+        if ($mime_type !== 'application/pdf') {
             http_response_code(400); echo json_encode(['error' => 'El comprobante SNI debe ser un archivo PDF.']); return;
         }
+
         $extension = pathinfo($archivo_sni['name'], PATHINFO_EXTENSION);
         $comprobante_sni_ruta = 'sni_' . $_SESSION['usuario_id'] . '_' . time() . '.' . $extension;
-        move_uploaded_file($archivo_sni['tmp_name'], $directorio_revisores . $comprobante_sni_ruta);
+
+        if (!move_uploaded_file($archivo_sni['tmp_name'], $directorio_revisores . $comprobante_sni_ruta)) {
+             http_response_code(500); echo json_encode(['error' => 'Error al subir el comprobante SNI.']); return;
+        }
 
         if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
             $archivo_foto = $_FILES['foto'];
+
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime_type = finfo_file($finfo, $archivo_foto['tmp_name']);
+            finfo_close($finfo);
+
             $tipos_permitidos = ['image/jpeg', 'image/png'];
-            if (!in_array($archivo_foto['type'], $tipos_permitidos)) {
+            if (!in_array($mime_type, $tipos_permitidos)) {
                 http_response_code(400); echo json_encode(['error' => 'La foto debe ser un archivo JPG o PNG.']); return;
             }
             $extension = pathinfo($archivo_foto['name'], PATHINFO_EXTENSION);
             $foto_ruta = 'foto_' . $_SESSION['usuario_id'] . '_' . time() . '.' . $extension;
-            move_uploaded_file($archivo_foto['tmp_name'], $directorio_revisores . $foto_ruta);
+
+            if (!move_uploaded_file($archivo_foto['tmp_name'], $directorio_revisores . $foto_ruta)) {
+                http_response_code(500); echo json_encode(['error' => 'Error al subir la fotografía.']); return;
+            }
         }
 
         $datos = [
@@ -220,7 +253,9 @@ class RevisorExtensosController {
     }
 
     public function guardarBorradorEvaluacion($evaluacion_id) {
+        if (ob_get_length()) ob_clean();
         header('Content-Type: application/json');
+
         if (!isset($_SESSION['usuario_id'])) { http_response_code(403); echo json_encode(['error'=>'Permisos']); return; }
         $d = $_POST;
         $resp = []; for($i=1;$i<=6;$i++) $resp['pregunta_'.$i]=$d['pregunta_'.$i]??null;
@@ -230,7 +265,10 @@ class RevisorExtensosController {
     }
 
     public function actualizarPerfil() {
+        // Discard any previous output (e.g. PHP warnings/notices)
+        if (ob_get_length()) ob_clean();
         header('Content-Type: application/json');
+
         if (!isset($_SESSION['usuario_id']) || !in_array('Revisor de Extensos', $_SESSION['usuario_roles'])) {
             http_response_code(403); echo json_encode(['error' => 'Permisos insuficientes.']); return;
         }
@@ -248,9 +286,9 @@ class RevisorExtensosController {
 
         $comprobante_sni_ruta = null;
         $foto_ruta = null;
-        // CHANGE: Move uploads to public/uploads/ so they are accessible by web server
+
         $directorio_revisores = BACKEND_ROOT . '/public/uploads/revisores_perfil/';
-        if (!is_dir($directorio_revisores)) { mkdir($directorio_revisores, 0755, true); }
+        if (!is_dir($directorio_revisores)) { @mkdir($directorio_revisores, 0755, true); }
 
         if (isset($_FILES['comprobante_sni']) && $_FILES['comprobante_sni']['error'] === UPLOAD_ERR_OK) {
             $archivo_sni = $_FILES['comprobante_sni'];
