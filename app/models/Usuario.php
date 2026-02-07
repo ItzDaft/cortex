@@ -283,17 +283,17 @@ public static function buscarRevisorDisponiblePorArea(int $area_id) {
             $sql_perfil = "INSERT INTO revisores_extensos_perfil 
                                 (usuario_id, grado_academico, afiliacion_institucional, cargo_actual, area_especialidad, orcid, google_scholar_id, comprobante_sni_ruta, foto_ruta, acepta_terminos)
                             VALUES
-                                (:usuario_id, :grado_academico, :afiliacion_institucional, :cargo_actual, :area_especialidad, :orcid, :google_scholar_id, :comprobante_sni_ruta, :foto_ruta, :acepta_terminos)
+                                (:usuario_id, :grado_academico, :afiliacion_institucional, :cargo_actual, :area_especialidad, :orcid, :google_scholar_id, :comprobante_sni_ruta, :foto_ruta, :acepta_terminos) AS new_perfil
                             ON DUPLICATE KEY UPDATE
-                                grado_academico = :grado_academico,
-                                afiliacion_institucional = :afiliacion_institucional,
-                                cargo_actual = :cargo_actual,
-                                area_especialidad = :area_especialidad,
-                                orcid = :orcid,
-                                google_scholar_id = :google_scholar_id,
-                                comprobante_sni_ruta = COALESCE(:comprobante_sni_ruta, comprobante_sni_ruta),
-                                foto_ruta = COALESCE(:foto_ruta, foto_ruta),
-                                acepta_terminos = :acepta_terminos";
+                                grado_academico = new_perfil.grado_academico,
+                                afiliacion_institucional = new_perfil.afiliacion_institucional,
+                                cargo_actual = new_perfil.cargo_actual,
+                                area_especialidad = new_perfil.area_especialidad,
+                                orcid = new_perfil.orcid,
+                                google_scholar_id = new_perfil.google_scholar_id,
+                                comprobante_sni_ruta = COALESCE(new_perfil.comprobante_sni_ruta, revisores_extensos_perfil.comprobante_sni_ruta),
+                                foto_ruta = COALESCE(new_perfil.foto_ruta, revisores_extensos_perfil.foto_ruta),
+                                acepta_terminos = new_perfil.acepta_terminos";
             
             $stmt_perfil = $pdo->prepare($sql_perfil);
             $stmt_perfil->execute($datos);
