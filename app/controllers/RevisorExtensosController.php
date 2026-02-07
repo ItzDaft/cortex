@@ -148,6 +148,10 @@ class RevisorExtensosController {
         if (!isset($_SESSION['usuario_id']) || !in_array('Revisor de Extensos', $_SESSION['usuario_roles'])) {
             http_response_code(403); echo json_encode(['error' => 'Permisos insuficientes.']); return;
         }
+
+        if (!isset($_POST['csrf_token']) || !CSRFHelper::verifyToken($_POST['csrf_token'])) {
+            http_response_code(403); echo json_encode(['error' => 'Token de seguridad inválido. Recarga la página.']); return;
+        }
         
         $campos_requeridos = ['grado_academico', 'afiliacion_institucional', 'cargo_actual', 'area_especialidad', 'area_id'];
         foreach ($campos_requeridos as $campo) {
