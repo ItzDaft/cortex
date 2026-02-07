@@ -245,6 +245,7 @@ class RevisorExtensosController {
         
         if (Usuario::guardarPerfilRevisorExtenso($datos, (int)$area_id)) {
                 $_SESSION['area_id'] = (int)$area_id;
+                if (ob_get_length()) ob_clean();
                 echo json_encode(['mensaje' => 'Perfil completado con éxito. ¡Gracias por tu colaboración!']);
         } else {
             http_response_code(500);

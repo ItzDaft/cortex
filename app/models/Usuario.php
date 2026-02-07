@@ -285,15 +285,15 @@ public static function buscarRevisorDisponiblePorArea(int $area_id) {
                             VALUES
                                 (:usuario_id, :grado_academico, :afiliacion_institucional, :cargo_actual, :area_especialidad, :orcid, :google_scholar_id, :comprobante_sni_ruta, :foto_ruta, :acepta_terminos)
                             ON DUPLICATE KEY UPDATE
-                                grado_academico = VALUES(grado_academico),
-                                afiliacion_institucional = VALUES(afiliacion_institucional),
-                                cargo_actual = VALUES(cargo_actual),
-                                area_especialidad = VALUES(area_especialidad),
-                                orcid = VALUES(orcid),
-                                google_scholar_id = VALUES(google_scholar_id),
-                                comprobante_sni_ruta = COALESCE(VALUES(comprobante_sni_ruta), comprobante_sni_ruta),
-                                foto_ruta = COALESCE(VALUES(foto_ruta), foto_ruta),
-                                acepta_terminos = VALUES(acepta_terminos)";
+                                grado_academico = :grado_academico,
+                                afiliacion_institucional = :afiliacion_institucional,
+                                cargo_actual = :cargo_actual,
+                                area_especialidad = :area_especialidad,
+                                orcid = :orcid,
+                                google_scholar_id = :google_scholar_id,
+                                comprobante_sni_ruta = COALESCE(:comprobante_sni_ruta, comprobante_sni_ruta),
+                                foto_ruta = COALESCE(:foto_ruta, foto_ruta),
+                                acepta_terminos = :acepta_terminos";
             
             $stmt_perfil = $pdo->prepare($sql_perfil);
             $stmt_perfil->execute($datos);
