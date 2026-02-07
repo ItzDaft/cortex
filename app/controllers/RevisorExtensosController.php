@@ -182,7 +182,7 @@ class RevisorExtensosController {
         $foto_ruta = null;
         
         // Define directory path
-        $directorio_revisores = BACKEND_ROOT . '/public/uploads/revisores_perfil/';
+        $directorio_revisores = BACKEND_ROOT . '/uploads/revisores_perfil/';
         
         // Ensure directory exists
         if (!is_dir($directorio_revisores)) { 
@@ -208,6 +208,7 @@ class RevisorExtensosController {
         $comprobante_sni_ruta = 'sni_' . $_SESSION['usuario_id'] . '_' . time() . '.' . $extension;
         
         if (!move_uploaded_file($archivo_sni['tmp_name'], $directorio_revisores . $comprobante_sni_ruta)) {
+             if (ob_get_length()) ob_clean();
              http_response_code(500); echo json_encode(['error' => 'Error al subir el comprobante SNI.']); return;
         }
 
@@ -226,6 +227,7 @@ class RevisorExtensosController {
             $foto_ruta = 'foto_' . $_SESSION['usuario_id'] . '_' . time() . '.' . $extension;
             
             if (!move_uploaded_file($archivo_foto['tmp_name'], $directorio_revisores . $foto_ruta)) {
+                if (ob_get_length()) ob_clean();
                 http_response_code(500); echo json_encode(['error' => 'Error al subir la fotografía.']); return;
             }
         }
@@ -288,7 +290,7 @@ class RevisorExtensosController {
         $comprobante_sni_ruta = null;
         $foto_ruta = null;
         
-        $directorio_revisores = BACKEND_ROOT . '/public/uploads/revisores_perfil/';
+        $directorio_revisores = BACKEND_ROOT . '/uploads/revisores_perfil/';
         if (!is_dir($directorio_revisores)) { @mkdir($directorio_revisores, 0755, true); }
 
         if (isset($_FILES['comprobante_sni']) && $_FILES['comprobante_sni']['error'] === UPLOAD_ERR_OK) {
@@ -304,6 +306,7 @@ class RevisorExtensosController {
             $extension = pathinfo($archivo_sni['name'], PATHINFO_EXTENSION);
             $comprobante_sni_ruta = 'sni_' . $_SESSION['usuario_id'] . '_' . time() . '.' . $extension;
             if (!move_uploaded_file($archivo_sni['tmp_name'], $directorio_revisores . $comprobante_sni_ruta)) {
+                if (ob_get_length()) ob_clean();
                 http_response_code(500); echo json_encode(['error' => 'Error al subir el comprobante SNI.']); return;
             }
         }
@@ -322,6 +325,7 @@ class RevisorExtensosController {
             $extension = pathinfo($archivo_foto['name'], PATHINFO_EXTENSION);
             $foto_ruta = 'foto_' . $_SESSION['usuario_id'] . '_' . time() . '.' . $extension;
             if (!move_uploaded_file($archivo_foto['tmp_name'], $directorio_revisores . $foto_ruta)) {
+                 if (ob_get_length()) ob_clean();
                  http_response_code(500); echo json_encode(['error' => 'Error al subir la fotografía.']); return;
             }
         }
