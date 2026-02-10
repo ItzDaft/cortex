@@ -8,8 +8,11 @@ class EvaluacionExtenso {
      */
     public static function asignarRevisores(int $extenso_version_id, array $revisores_ids): bool {
         $pdo = Database::conectar();
+        $inTransaction = $pdo->inTransaction(); // Check if already in transaction
         try {
-            $pdo->beginTransaction();
+            if (!$inTransaction) {
+                $pdo->beginTransaction();
+            }
             $sql = "INSERT INTO evaluaciones_extensos (extenso_version_id, revisor_id, estatus_evaluacion, veredicto, fecha_asignacion) 
                     VALUES (:extenso_version_id, :revisor_id, 'Pendiente', 'Pendiente', NOW())";
             $stmt = $pdo->prepare($sql);
@@ -19,10 +22,14 @@ class EvaluacionExtenso {
                     'revisor_id' => (int)$revisor_id
                 ]);
             }
-            $pdo->commit();
+            if (!$inTransaction) {
+                $pdo->commit();
+            }
             return true;
         } catch (Exception $e) {
-            $pdo->rollBack();
+            if (!$inTransaction) {
+                $pdo->rollBack();
+            }
             error_log($e->getMessage());
             return false;
         }
@@ -243,10 +250,13 @@ public static function asignarTercerRevisor(int $extenso_version_id, int $reviso
     /**
      * Actualiza los revisores de una versión de extenso (borra los anteriores e inserta los nuevos).
      */
-public static function actualizarRevisores(int $extenso_version_id, array $revisores_ids): bool {
+    public static function actualizarRevisores(int $extenso_version_id, array $revisores_ids): bool {
         $pdo = Database::conectar();
+        $inTransaction = $pdo->inTransaction();
         try {
-            $pdo->beginTransaction();
+            if (!$inTransaction) {
+                $pdo->beginTransaction();
+            }
             $stmt_delete = $pdo->prepare("DELETE FROM evaluaciones_extensos WHERE extenso_version_id = :id");
             $stmt_delete->execute(['id' => $extenso_version_id]);
 
@@ -254,10 +264,14 @@ public static function actualizarRevisores(int $extenso_version_id, array $revis
             foreach ($revisores_ids as $revisor_id) {
                 $stmt_insert->execute(['version_id' => $extenso_version_id, 'revisor_id' => (int)$revisor_id]);
             }
-            $pdo->commit();
+            if (!$inTransaction) {
+                $pdo->commit();
+            }
             return true;
         } catch (Exception $e) {
-            $pdo->rollBack();
+            if (!$inTransaction) {
+                $pdo->rollBack();
+            }
             error_log($e->getMessage());
             return false;
         }

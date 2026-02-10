@@ -80,68 +80,82 @@ public function reenviar($extenso_id) {
 /**
  * (API) Procesa la subida de una nueva versión del artículo extenso.
  */
-public function procesarReenvio($extenso_id) {
-    header('Content-Type: application/json');
-    if (!isset($_SESSION['usuario_id'])) {
-        http_response_code(403); echo json_encode(['error' => 'Permisos insuficientes.']); return;
-    }
+    public function procesarReenvio($extenso_id) {
+        // PREVENIR CUALQUIER SALIDA HTML POR ERRORES/WARNINGS
+        ini_set('display_errors', 0);
+        error_reporting(0);
+        
+        header('Content-Type: application/json');
+        
+        try {
+            if (!isset($_SESSION['usuario_id'])) {
+                throw new Exception('Permisos insuficientes.');
+            }
 
-    // Validar fecha límite
-    $fechaLimite = Extenso::calcularFechaLimite($extenso_id);
-    if ($fechaLimite && new DateTime() > new DateTime($fechaLimite)) {
-         http_response_code(403); 
-         echo json_encode(['error' => 'El plazo de 15 días para enviar correcciones ha vencido.']); 
-         return;
-    }
+            // Validar fecha límite
+            $fechaLimite = Extenso::calcularFechaLimite($extenso_id);
+            if ($fechaLimite && new DateTime() > new DateTime($fechaLimite)) {
+                 throw new Exception('El plazo de 15 días para enviar correcciones ha vencido.');
+            }
 
-    if (!isset($_FILES['archivo_extenso']) || $_FILES['archivo_extenso']['error'] !== UPLOAD_ERR_OK) {
-        http_response_code(400); echo json_encode(['error' => 'No se recibió el archivo.']); return;
-    }
-    $archivo = $_FILES['archivo_extenso'];
-    $tipos_permitidos = ['application/pdf'];
-    if (!in_array(mime_content_type($archivo['tmp_name']), $tipos_permitidos)) {
-    http_response_code(400); 
-    echo json_encode(['error' => 'Formato de archivo no permitido. Solo se aceptan archivos PDF.']); 
-    return;
-}
-    $pdo = Database::conectar();
-    try {
-        $pdo->beginTransaction();
+            if (!isset($_FILES['archivo_extenso']) || $_FILES['archivo_extenso']['error'] !== UPLOAD_ERR_OK) {
+                throw new Exception('No se recibió el archivo o hubo un error en la subida.');
+            }
+            
+            $archivo = $_FILES['archivo_extenso'];
+            $tipos_permitidos = ['application/pdf'];
+            
+            // Validar MIME type
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime = finfo_file($finfo, $archivo['tmp_name']);
+            finfo_close($finfo);
 
-        // Obtener ID de la versión anterior para replicar asignación
-        $idVersionAnterior = Extenso::obtenerIdUltimaVersion($extenso_id);
+            if (!in_array($mime, $tipos_permitidos)) {
+                throw new Exception('Formato de archivo no permitido. Solo se aceptan archivos PDF.');
+            }
 
-        // NO eliminamos evaluaciones anteriores para mantener el historial
-        // EvaluacionExtenso::eliminarEvaluacionesAnteriores($extenso_id);
+            $pdo = Database::conectar();
+            $pdo->beginTransaction();
 
-        $directorioSubida = BACKEND_ROOT . '/uploads/extensos/';
-        $archivo = $_FILES['archivo_extenso'];
-        $extension = pathinfo($archivo['name'], PATHINFO_EXTENSION);
-        $ultimoIntento = Extenso::obtenerUltimoIntento($extenso_id);
-        $nuevoIntento = $ultimoIntento + 1;
-        $nombreUnico = 'extenso_' . $extenso_id . '_v' . $nuevoIntento . '_' . time() . '.' . $extension;
+            $idVersionAnterior = Extenso::obtenerIdUltimaVersion($extenso_id);
 
-        if (!move_uploaded_file($archivo['tmp_name'], $directorioSubida . $nombreUnico)) {
-            throw new Exception('No se pudo guardar el archivo.');
+            $directorioSubida = BACKEND_ROOT . '/uploads/extensos/';
+            if (!is_dir($directorioSubida)) {
+                mkdir($directorioSubida, 0777, true);
+            }
+
+            $extension = pathinfo($archivo['name'], PATHINFO_EXTENSION);
+            $ultimoIntento = Extenso::obtenerUltimoIntento($extenso_id);
+            $nuevoIntento = $ultimoIntento + 1;
+            $nombreUnico = 'extenso_' . $extenso_id . '_v' . $nuevoIntento . '_' . time() . '.' . $extension;
+            $rutaCompleta = $directorioSubida . $nombreUnico;
+
+            if (!move_uploaded_file($archivo['tmp_name'], $rutaCompleta)) {
+                throw new Exception('No se pudo guardar el archivo físico en el servidor.');
+            }
+
+            Extenso::agregarVersion($extenso_id, $nuevoIntento, $nombreUnico);
+            
+            // Si el estatus era Conflicto o Rechazado, lo regresamos a Pendiente de Filtro para revisión
+            Extenso::actualizarEstatus($extenso_id, 'Pendiente de Filtro');
+
+            // Replicar asignación de revisores para la nueva versión si existía previa
+            $idVersionNueva = Extenso::obtenerIdUltimaVersion($extenso_id);
+            if ($idVersionAnterior && $idVersionNueva) {
+                // Intentamos replicar, si falla no detenemos el proceso pero podríamos loguearlo
+                EvaluacionExtenso::replicarAsignacion($idVersionAnterior, $idVersionNueva);
+            }
+
+            $pdo->commit();
+            echo json_encode(['mensaje' => 'Nueva versión enviada con éxito.']);
+
+        } catch (Exception $e) {
+            if (isset($pdo) && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            http_response_code(400); // 400 Bad Request para errores lógicos
+            echo json_encode(['error' => $e->getMessage()]);
         }
-
-        Extenso::agregarVersion($extenso_id, $nuevoIntento, $nombreUnico);
-        Extenso::actualizarEstatus($extenso_id, 'Pendiente de Filtro');
-
-        // Replicar asignación de revisores para la nueva versión
-        $idVersionNueva = Extenso::obtenerIdUltimaVersion($extenso_id);
-        if ($idVersionAnterior) {
-            EvaluacionExtenso::replicarAsignacion($idVersionAnterior, $idVersionNueva);
-        }
-
-        $pdo->commit();
-        echo json_encode(['mensaje' => 'Nueva versión enviada con éxito.']);
-
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        http_response_code(500);
-        echo json_encode(['error' => $e->getMessage()]);
     }
-}
 
 }

@@ -41,7 +41,6 @@
     const baseUrl = '<?php echo BASE_URL; ?>';
     const extensoId = <?php echo $extenso_id; ?>;
     
-    // CAMBIO 1: Se inyecta el token en una variable de JavaScript
     const csrfToken = '<?php echo $_SESSION["csrf_token"] ?? ""; ?>';
 
     formEnviarExtenso.addEventListener('submit', function(event) {
@@ -51,7 +50,6 @@
         
         const formData = new FormData(this);
         
-        // CAMBIO 2: Se añade manualmente el token al FormData
         formData.append('csrf_token', csrfToken);
 
         fetch(`${baseUrl}extenso/procesarEnvio/${extensoId}`, {
