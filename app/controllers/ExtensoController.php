@@ -48,39 +48,43 @@ class ExtensoController {
             echo json_encode(['error' => 'No se pudo guardar el archivo del extenso.']);
         }
     }
- /**
- * Muestra la página para que el autor suba una nueva versión de su extenso.
- */
-public function reenviar($extenso_id) {
-    if (!isset($_SESSION['usuario_id'])) { redirect(''); }
+/**
+     * Muestra la página para que el autor suba una nueva versión de su extenso.
+     */
+    public function reenviar($extenso_id) {
+        if (!isset($_SESSION['usuario_id'])) { redirect(''); }
 
-    $extenso = Extenso::obtenerDetallesParaAutor($extenso_id);
+        $extenso = Extenso::obtenerDetallesParaAutor($extenso_id);
 
-    // Calcular fecha límite para reenvío (15 días)
-    $fechaLimite = Extenso::calcularFechaLimite($extenso_id);
-    $diasRestantes = 0;
-    $plazoVencido = false;
+        // Calcular fecha límite para reenvío (15 días)
+        $fechaLimite = Extenso::calcularFechaLimite($extenso_id);
+        $diasRestantes = 0;
+        
+        // MODIFICACIÓN: Forzamos a false para permitir el reenvío siempre
+        $plazoVencido = false;
 
-    if ($fechaLimite) {
-        $limite = new DateTime($fechaLimite);
-        $hoy = new DateTime();
-        if ($hoy > $limite) {
-            $plazoVencido = true;
-        } else {
-            $diasRestantes = $hoy->diff($limite)->days;
+        /* LÓGICA ORIGINAL COMENTADA (Límite de 15 días)
+        if ($fechaLimite) {
+            $limite = new DateTime($fechaLimite);
+            $hoy = new DateTime();
+            if ($hoy > $limite) {
+                $plazoVencido = true;
+            } else {
+                $diasRestantes = $hoy->diff($limite)->days;
+            }
         }
-    }
+        */
 
-    CSRFHelper::generateToken();
-    require_once BACKEND_ROOT . '/app/views/layout/header.php';
-    require_once BACKEND_ROOT . '/app/views/extenso/reenviar.php';
-    require_once BACKEND_ROOT . '/app/views/layout/footer.php';
-}
+        CSRFHelper::generateToken();
+        require_once BACKEND_ROOT . '/app/views/layout/header.php';
+        require_once BACKEND_ROOT . '/app/views/extenso/reenviar.php';
+        require_once BACKEND_ROOT . '/app/views/layout/footer.php';
+    }
 
 /**
  * (API) Procesa la subida de una nueva versión del artículo extenso.
  */
-    public function procesarReenvio($extenso_id) {
+public function procesarReenvio($extenso_id) {
         // PREVENIR CUALQUIER SALIDA HTML POR ERRORES/WARNINGS
         ini_set('display_errors', 0);
         error_reporting(0);
@@ -92,11 +96,13 @@ public function reenviar($extenso_id) {
                 throw new Exception('Permisos insuficientes.');
             }
 
-            // Validar fecha límite
+            // MODIFICACIÓN: Validar fecha límite (COMENTADO PARA DESACTIVAR LÍMITE)
+            /*
             $fechaLimite = Extenso::calcularFechaLimite($extenso_id);
             if ($fechaLimite && new DateTime() > new DateTime($fechaLimite)) {
                  throw new Exception('El plazo de 15 días para enviar correcciones ha vencido.');
             }
+            */
 
             if (!isset($_FILES['archivo_extenso']) || $_FILES['archivo_extenso']['error'] !== UPLOAD_ERR_OK) {
                 throw new Exception('No se recibió el archivo o hubo un error en la subida.');

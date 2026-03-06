@@ -267,7 +267,7 @@ class Extenso {
         return $stmt->fetchAll();
     }
 
-    /**
+/**
      * Calcula la fecha límite (15 días después de la última evaluación de la versión actual).
      */
     public static function calcularFechaLimite(int $extenso_id): ?string {
@@ -289,6 +289,9 @@ class Extenso {
 
         if (!$fecha_eval) return null;
 
-        return date('Y-m-d H:i:s', strtotime($fecha_eval . ' + 15 days'));
+        // MODIFICACIÓN: Lógica original comentada para desactivar los 15 días
+        // return date('Y-m-d H:i:s', strtotime($fecha_eval . ' + 15 days'));
+        
+        // Retornamos null para que el sistema asuma que NO hay fecha límite
+        return null; 
     }
-}
