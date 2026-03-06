@@ -295,3 +295,4 @@ class Extenso {
         // Retornamos null para que el sistema asuma que NO hay fecha límite
         return null; 
     }
+}
