@@ -12,7 +12,7 @@ class ArchivoController {
             die('Acceso denegado.');
         }
 
-        $tiposPermitidos = ['pagos', 'resumenes', 'extensos', 'evaluaciones_firmadas', 'revisores_perfil'];
+        $tiposPermitidos = ['pagos', 'resumenes', 'extensos', 'extensos_finales', 'evaluaciones_firmadas', 'revisores_perfil'];
         if (!in_array($tipo, $tiposPermitidos)) {
             die('Tipo de archivo no válido.');
         }

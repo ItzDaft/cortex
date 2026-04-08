@@ -164,4 +164,82 @@ public function procesarReenvio($extenso_id) {
         }
     }
 
+    /**
+     * Formulario para subir el PDF final (versión para revista).
+     */
+    public function subirFinal($extenso_id) {
+        if (!isset($_SESSION['usuario_id']) || !in_array('Autor', $_SESSION['usuario_roles'])) {
+            redirect('');
+        }
+
+        $subir_final = Extenso::obtenerParaSubidaVersionFinal((int) $extenso_id, (int) $_SESSION['usuario_id']);
+        if (!$subir_final) {
+            redirect('');
+        }
+
+        CSRFHelper::generateToken();
+        require_once BACKEND_ROOT . '/app/views/layout/header.php';
+        require_once BACKEND_ROOT . '/app/views/extenso/subir_final.php';
+        require_once BACKEND_ROOT . '/app/views/layout/footer.php';
+    }
+
+    /**
+     * Procesa la subida del PDF final (un solo archivo por extenso; reemplaza si ya existía).
+     */
+    public function procesarSubidaFinal($extenso_id) {
+        ini_set('display_errors', 0);
+        error_reporting(0);
+        header('Content-Type: application/json');
+
+        try {
+            if (!isset($_SESSION['usuario_id']) || !in_array('Autor', $_SESSION['usuario_roles'])) {
+                throw new Exception('Permisos insuficientes.');
+            }
+
+            $extenso_id = (int) $extenso_id;
+            $ctx = Extenso::obtenerParaSubidaVersionFinal($extenso_id, (int) $_SESSION['usuario_id']);
+            if (!$ctx) {
+                throw new Exception('No puede subir la versión final para este artículo.');
+            }
+
+            if (!isset($_FILES['archivo_extenso']) || $_FILES['archivo_extenso']['error'] !== UPLOAD_ERR_OK) {
+                throw new Exception('No se recibió el archivo o hubo un error en la subida.');
+            }
+
+            $archivo = $_FILES['archivo_extenso'];
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime = finfo_file($finfo, $archivo['tmp_name']);
+            finfo_close($finfo);
+
+            if ($mime !== 'application/pdf') {
+                throw new Exception('Formato de archivo no permitido. Solo se aceptan archivos PDF.');
+            }
+
+            $directorioSubida = BACKEND_ROOT . '/uploads/extensos_finales/';
+            if (!is_dir($directorioSubida)) {
+                mkdir($directorioSubida, 0777, true);
+            }
+
+            $extension = pathinfo($archivo['name'], PATHINFO_EXTENSION);
+            $nombreUnico = 'extenso_' . $extenso_id . '_final_' . time() . '.' . $extension;
+            $rutaCompleta = $directorioSubida . $nombreUnico;
+
+            if (!move_uploaded_file($archivo['tmp_name'], $rutaCompleta)) {
+                throw new Exception('No se pudo guardar el archivo en el servidor.');
+            }
+
+            if (!Extenso::guardarOReemplazarVersionFinal($extenso_id, $nombreUnico)) {
+                if (is_file($rutaCompleta)) {
+                    @unlink($rutaCompleta);
+                }
+                throw new Exception('No se pudo registrar el archivo en la base de datos.');
+            }
+
+            echo json_encode(['mensaje' => 'Versión final enviada con éxito.']);
+        } catch (Exception $e) {
+            http_response_code(400);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+    }
+
 }

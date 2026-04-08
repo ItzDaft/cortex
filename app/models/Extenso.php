@@ -196,7 +196,77 @@ class Extenso {
         $stmt_evaluaciones->execute(['extenso_id' => $extenso_id]);
         $extenso['evaluaciones'] = $stmt_evaluaciones->fetchAll();
 
+        $stmt_final = $pdo->prepare('SELECT archivo_ruta, fecha_envio FROM extenso_version_final WHERE extenso_id = :extenso_id');
+        $stmt_final->execute(['extenso_id' => $extenso_id]);
+        $vf = $stmt_final->fetch();
+        $extenso['version_final'] = $vf ?: null;
+
         return $extenso;
+    }
+
+    /**
+     * Registro de versión final (PDF para revista), si existe.
+     */
+    public static function obtenerVersionFinalPorExtenso(int $extenso_id): ?array {
+        $pdo = Database::conectar();
+        $stmt = $pdo->prepare('SELECT id, extenso_id, archivo_ruta, fecha_envio FROM extenso_version_final WHERE extenso_id = :extenso_id');
+        $stmt->execute(['extenso_id' => $extenso_id]);
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
+
+    /**
+     * Extenso en estado Aceptado Final y perteneciente al autor; incluye datos del resumen para la vista de subida.
+     */
+    public static function obtenerParaSubidaVersionFinal(int $extenso_id, int $autor_id): ?array {
+        $pdo = Database::conectar();
+        $sql = 'SELECT e.id AS extenso_id, e.estatus_extenso, e.resumen_id,
+                       r.titulo, r.autor_principal, r.coautores, r.adscripcion1, r.adscripcion2,
+                       evf.archivo_ruta AS vf_archivo_ruta, evf.fecha_envio AS vf_fecha_envio
+                FROM extensos e
+                INNER JOIN resumenes r ON e.resumen_id = r.id
+                LEFT JOIN extenso_version_final evf ON evf.extenso_id = e.id
+                WHERE e.id = :extenso_id AND r.autor_id = :autor_id AND e.estatus_extenso = :estatus';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            'extenso_id' => $extenso_id,
+            'autor_id'   => $autor_id,
+            'estatus'    => 'Aceptado Final',
+        ]);
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
+
+    /**
+     * Inserta o actualiza el PDF final y elimina el archivo anterior del disco si se reemplaza.
+     */
+    public static function guardarOReemplazarVersionFinal(int $extenso_id, string $archivo_ruta): bool {
+        $pdo = Database::conectar();
+        $anterior = self::obtenerVersionFinalPorExtenso($extenso_id);
+        $dir = BACKEND_ROOT . '/uploads/extensos_finales/';
+
+        $pdo->beginTransaction();
+        if ($anterior) {
+            $stmt = $pdo->prepare('UPDATE extenso_version_final SET archivo_ruta = :archivo_ruta, fecha_envio = CURRENT_TIMESTAMP WHERE extenso_id = :extenso_id');
+            $ok = $stmt->execute(['archivo_ruta' => $archivo_ruta, 'extenso_id' => $extenso_id]);
+        } else {
+            $stmt = $pdo->prepare('INSERT INTO extenso_version_final (extenso_id, archivo_ruta) VALUES (:extenso_id, :archivo_ruta)');
+            $ok = $stmt->execute(['extenso_id' => $extenso_id, 'archivo_ruta' => $archivo_ruta]);
+        }
+        if (!$ok) {
+            $pdo->rollBack();
+            return false;
+        }
+        $pdo->commit();
+
+        if ($anterior && !empty($anterior['archivo_ruta']) && $anterior['archivo_ruta'] !== $archivo_ruta) {
+            $rutaVieja = $dir . basename($anterior['archivo_ruta']);
+            if (is_file($rutaVieja)) {
+                @unlink($rutaVieja);
+            }
+        }
+
+        return true;
     }
 
     /**

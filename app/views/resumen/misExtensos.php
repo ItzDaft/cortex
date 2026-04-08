@@ -76,6 +76,11 @@
                                 <?php else: ?>
                                     <p class="text-danger">Ya has alcanzado el número máximo de envíos para este artículo.</p>
                                 <?php endif; ?>
+                            <?php elseif ($extenso['estatus_extenso'] == 'Aceptado Final'): ?>
+                                <a href="<?php echo BASE_URL; ?>extenso/subirFinal/<?php echo $extenso['id']; ?>" class="btn btn-primary">
+                                    <i class="bi bi-journal-check"></i>
+                                    <?php echo !empty($extenso['version_final']) ? 'Reemplazar versión final (PDF revista)' : 'Subir versión final (PDF revista)'; ?>
+                                </a>
                             <?php endif; ?>
                         </div>
 
@@ -90,6 +95,22 @@
                             </li>
                             <?php endforeach; ?>
                         </ul>
+
+                        <?php if ($extenso['estatus_extenso'] == 'Aceptado Final'): ?>
+                            <h5 class="mt-4">Versión final para la revista (PDF)</h5>
+                            <?php if (!empty($extenso['version_final'])): ?>
+                                <ul class="list-group">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                        <span>PDF enviado el <?php echo date('d/m/Y H:i', strtotime($extenso['version_final']['fecha_envio'])); ?></span>
+                                        <a href="<?php echo BASE_URL; ?>archivo/ver/extensos_finales/<?php echo htmlspecialchars($extenso['version_final']['archivo_ruta']); ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-download"></i> Descargar
+                                        </a>
+                                    </li>
+                                </ul>
+                            <?php else: ?>
+                                <p class="text-muted mb-0">Aún no has subido el PDF final que se enviará a la revista. Usa el botón de arriba cuando esté listo.</p>
+                            <?php endif; ?>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
