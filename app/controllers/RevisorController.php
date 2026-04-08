@@ -446,6 +446,7 @@ class RevisorController {
         $stmtArea = $pdo->prepare("SELECT area_id FROM usuarios WHERE id = ?");
         $stmtArea->execute([$usuario_id]);
         $area_id = $stmtArea->fetchColumn();
+        $historialSeguimiento = EvaluacionExtenso::obtenerHistorialSeguimientoPorArea((int)$area_id);
 
         $sql = "
             SELECT 

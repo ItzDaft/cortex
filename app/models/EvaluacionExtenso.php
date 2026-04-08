@@ -435,4 +435,105 @@ public static function obtenerDetallesDeAsignacionesPorArea(int $area_id): array
         $stmt->execute(['revisor_id' => $revisor_id]);
         return $stmt->fetchAll();
     }
+
+    /**
+     * Construye un historial completo de seguimiento por resumen para supervisión.
+     * Incluye todas las versiones (Rev1, Rev2, ... ) y la versión final si existe.
+     */
+    public static function obtenerHistorialSeguimientoPorArea(int $area_id): array {
+        $pdo = Database::conectar();
+
+        $sqlVersiones = "SELECT
+                            r.id AS resumen_id,
+                            r.titulo AS titulo_articulo,
+                            ev.intento AS version_intento,
+                            ee.id AS evaluacion_id,
+                            u.nombre_completo AS nombre_revisor,
+                            u.correo AS correo_revisor,
+                            ee.estatus_evaluacion,
+                            ee.veredicto,
+                            ee.observaciones_generales,
+                            ee.argumento_rechazo,
+                            ev.archivo_ruta AS archivo_ruta
+                        FROM resumenes r
+                        INNER JOIN extensos e ON e.resumen_id = r.id
+                        INNER JOIN extenso_versiones ev ON ev.extenso_id = e.id
+                        LEFT JOIN evaluaciones_extensos ee ON ee.extenso_version_id = ev.id
+                        LEFT JOIN usuarios u ON u.id = ee.revisor_id
+                        WHERE r.area_id = :area_id
+                        ORDER BY r.id DESC, ev.intento ASC, ee.fecha_asignacion ASC, ee.id ASC";
+
+        $stmtVersiones = $pdo->prepare($sqlVersiones);
+        $stmtVersiones->execute(['area_id' => $area_id]);
+        $rowsVersiones = $stmtVersiones->fetchAll(PDO::FETCH_ASSOC);
+
+        $sqlFinal = "SELECT
+                        r.id AS resumen_id,
+                        vf.archivo_ruta AS archivo_ruta_final
+                    FROM resumenes r
+                    INNER JOIN extensos e ON e.resumen_id = r.id
+                    INNER JOIN extenso_version_final vf ON vf.extenso_id = e.id
+                    WHERE r.area_id = :area_id";
+        $stmtFinal = $pdo->prepare($sqlFinal);
+        $stmtFinal->execute(['area_id' => $area_id]);
+        $rowsFinal = $stmtFinal->fetchAll(PDO::FETCH_ASSOC);
+
+        $finalPorResumen = [];
+        foreach ($rowsFinal as $rowFinal) {
+            $finalPorResumen[(int)$rowFinal['resumen_id']] = $rowFinal['archivo_ruta_final'];
+        }
+
+        $agrupado = [];
+        foreach ($rowsVersiones as $row) {
+            $resumenId = (int)($row['resumen_id'] ?? 0);
+            if ($resumenId <= 0) {
+                continue;
+            }
+
+            if (!isset($agrupado[$resumenId])) {
+                $agrupado[$resumenId] = [
+                    'resumen_id' => $resumenId,
+                    'titulo' => $row['titulo_articulo'] ?? 'Sin titulo',
+                    'filas' => []
+                ];
+            }
+
+            $comentario = '';
+            if (!empty($row['argumento_rechazo'])) {
+                $comentario = $row['argumento_rechazo'];
+            } elseif (!empty($row['observaciones_generales'])) {
+                $comentario = $row['observaciones_generales'];
+            }
+
+            $intento = (int)($row['version_intento'] ?? 0);
+            $agrupado[$resumenId]['filas'][] = [
+                'vuelta' => $intento > 0 ? ('Rev' . $intento) : 'Rev?',
+                'revisor' => $row['nombre_revisor'] ?? '',
+                'correo' => $row['correo_revisor'] ?? '',
+                'estatus' => $row['estatus_evaluacion'] ?? 'Pendiente',
+                'veredicto' => $row['veredicto'] ?? 'Pendiente',
+                'comentario' => $comentario,
+                'archivo_ruta' => $row['archivo_ruta'] ?? '',
+                'archivo_tipo' => 'extensos'
+            ];
+        }
+
+        foreach ($agrupado as $resumenId => &$item) {
+            if (!empty($finalPorResumen[$resumenId])) {
+                $item['filas'][] = [
+                    'vuelta' => 'Version Final',
+                    'revisor' => '-',
+                    'correo' => '',
+                    'estatus' => 'Entregada',
+                    'veredicto' => '',
+                    'comentario' => 'Documento final enviado por autor.',
+                    'archivo_ruta' => $finalPorResumen[$resumenId],
+                    'archivo_tipo' => 'extensos_finales'
+                ];
+            }
+        }
+        unset($item);
+
+        return array_values($agrupado);
+    }
 }
