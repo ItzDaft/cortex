@@ -3,4 +3,6 @@
 
 # Ignorar la carpeta de dependencias de Composer
 /vendor/
+# Ignorar la carpeta de uploads (donde se guardan los archivos subidos por los usuarios)
 /uploads/
+
