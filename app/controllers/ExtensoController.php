@@ -55,15 +55,15 @@ class ExtensoController {
         if (!isset($_SESSION['usuario_id'])) { redirect(''); }
 
         $extenso = Extenso::obtenerDetallesParaAutor($extenso_id);
-
+        
+        // Lógica de límite de fecha DESACTIVADA temporalmente.
+        // Dejar comentado para reactivar después:
+        /*
         // Calcular fecha límite para reenvío (15 días)
         $fechaLimite = Extenso::calcularFechaLimite($extenso_id);
         $diasRestantes = 0;
-        
-        // MODIFICACIÓN: Forzamos a false para permitir el reenvío siempre
         $plazoVencido = false;
 
-        /* LÓGICA ORIGINAL COMENTADA (Límite de 15 días)
         if ($fechaLimite) {
             $limite = new DateTime($fechaLimite);
             $hoy = new DateTime();
@@ -95,12 +95,13 @@ public function procesarReenvio($extenso_id) {
             if (!isset($_SESSION['usuario_id'])) {
                 throw new Exception('Permisos insuficientes.');
             }
-
-            // MODIFICACIÓN: Validar fecha límite (COMENTADO PARA DESACTIVAR LÍMITE)
+            
+            // Validación por fecha límite DESACTIVADA temporalmente.
+            // Dejar comentado para reactivar después:
             /*
             $fechaLimite = Extenso::calcularFechaLimite($extenso_id);
             if ($fechaLimite && new DateTime() > new DateTime($fechaLimite)) {
-                 throw new Exception('El plazo de 15 días para enviar correcciones ha vencido.');
+                throw new Exception('El plazo de 15 días para enviar correcciones ha vencido.');
             }
             */
 

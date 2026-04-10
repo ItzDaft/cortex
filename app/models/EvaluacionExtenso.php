@@ -286,40 +286,63 @@ public static function asignarTercerRevisor(int $extenso_version_id, int $reviso
 
         if ($numEvaluaciones < 2) return;
 
-        // Normalizamos los veredictos para evitar errores por espacios en blanco
-        $veredictos = array_map(function($ev) {
-            return trim($ev['veredicto']);
+        // Normalizamos los veredictos para soportar variantes históricas y acentos.
+        $normalizarVeredicto = static function (string $veredicto): string {
+            $v = trim(mb_strtolower($veredicto, 'UTF-8'));
+            $v = str_replace(['á', 'é', 'í', 'ó', 'ú'], ['a', 'e', 'i', 'o', 'u'], $v);
+
+            if (
+                strpos($v, 'no publicable') !== false ||
+                strpos($v, 'no se recomienda su publicacion') !== false
+            ) {
+                return 'no_publicable';
+            }
+
+            if (
+                strpos($v, 'favorable con correcciones') !== false ||
+                strpos($v, 'favorable y publicable con correcciones') !== false
+            ) {
+                return 'favorable_con_correcciones';
+            }
+
+            if (
+                strpos($v, 'favorable y publicable sin recomendaciones') !== false ||
+                $v === 'favorable y publicable'
+            ) {
+                return 'favorable_sin_recomendaciones';
+            }
+
+            return 'otro';
+        };
+
+        $veredictos = array_map(function($ev) use ($normalizarVeredicto) {
+            return $normalizarVeredicto((string)($ev['veredicto'] ?? ''));
         }, $evaluaciones);
 
         $conteos = array_count_values($veredictos);
-        
-        $aceptados = $conteos['Favorable y Publicable'] ?? 0;
-        $conCorrecciones = $conteos['Favorable con Correcciones'] ?? 0;
-        $rechazados = $conteos['No Publicable'] ?? 0;
-        
+
+        $aceptados = $conteos['favorable_sin_recomendaciones'] ?? 0;
+        $conCorrecciones = $conteos['favorable_con_correcciones'] ?? 0;
+        $rechazados = $conteos['no_publicable'] ?? 0;
+
         $estatus_final_extenso = '';
 
-        if ($numEvaluaciones >= 3) {
-            // Desempate con 3er revisor
-            if ($rechazados >= 2) {
-                $estatus_final_extenso = 'Rechazado';
-            } else {
-                $estatus_final_extenso = 'Aceptado con Correcciones';
-            }
-        } 
-        elseif ($numEvaluaciones == 2) {
-            if ($rechazados == 2) {
-                $estatus_final_extenso = 'Rechazado';
-            } elseif ($rechazados == 1) {
-                // CASO 4 y 5: 1 Rechazo + 1 (Favorable o Correcciones) -> Conflicto
-                $estatus_final_extenso = 'Conflicto';
-            } elseif ($aceptados == 2) {
-                // CASO 1: Favorable y Publicable + Favorable y Publicable
+        if ($numEvaluaciones >= 2) {
+            // Decisión por mayoría (2 a 5 revisores):
+            // - Rechazado: mayoría "No Publicable".
+            // - Aceptado Final: unanimidad "Favorable y Publicable" sin recomendaciones.
+            // - Aceptado con Correcciones: mayoría publicable (con o sin correcciones), sin unanimidad limpia.
+            // - Conflicto: empate o mezcla no concluyente.
+            $publicables = $aceptados + $conCorrecciones;
+
+            if ($aceptados === $numEvaluaciones) {
                 $estatus_final_extenso = 'Aceptado Final';
-            } else {
-                // CASO 2: Favorable con Correcciones + Favorable y Publicable
-                // CASO 3: Favorable con Correcciones + Favorable con Correcciones
+            } elseif ($rechazados > $publicables) {
+                $estatus_final_extenso = 'Rechazado';
+            } elseif ($publicables > $rechazados) {
                 $estatus_final_extenso = 'Aceptado con Correcciones';
+            } else {
+                $estatus_final_extenso = 'Conflicto';
             }
         }
 

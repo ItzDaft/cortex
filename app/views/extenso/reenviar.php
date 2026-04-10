@@ -4,7 +4,11 @@
         <p class="lead mb-4">Revisa los comentarios de los evaluadores y sube tu artículo corregido.</p>
         
         <div id="mensaje-envio"></div>
-
+        
+        <?php
+        // UI de fecha límite DESACTIVADA temporalmente.
+        // Dejar comentado para reactivar después:
+        /*
         <?php if (isset($plazoVencido) && $plazoVencido): ?>
             <div class="alert alert-danger text-center shadow mb-4">
                 <h4 class="alert-heading"><i class="bi bi-clock-history"></i> Plazo Vencido</h4>
@@ -22,6 +26,8 @@
                 </div>
             </div>
         <?php endif; ?>
+        */
+        ?>
 
         <div class="alert alert-danger text-center" style="font-size:1.1rem; font-weight:bold;">
             <span style="font-size:1.3rem; color:#b30000; display:block; margin-bottom:10px;">¡RECORDATORIO! Para evitar otro rechazo:</span>
@@ -73,7 +79,13 @@
             </div>
         </div>
 
+        <?php
+        // Condición por vencimiento DESACTIVADA temporalmente.
+        // Dejar comentado para reactivar después:
+        /*
         <?php if (!isset($plazoVencido) || !$plazoVencido): ?>
+        */
+        ?>
         <div class="card">
             <div class="card-body">
                 <form id="formReenviarExtenso" enctype="multipart/form-data">
@@ -90,7 +102,11 @@
                 </form>
             </div>
         </div>
+        <?php
+        /*
         <?php endif; ?>
+        */
+        ?>
     </div>
 </div>
 
