@@ -142,15 +142,20 @@ public function procesarReenvio($extenso_id) {
             }
 
             Extenso::agregarVersion($extenso_id, $nuevoIntento, $nombreUnico);
-            
-            // Si el estatus era Conflicto o Rechazado, lo regresamos a Pendiente de Filtro para revisión
-            Extenso::actualizarEstatus($extenso_id, 'Pendiente de Filtro');
 
             // Replicar asignación de revisores para la nueva versión si existía previa
             $idVersionNueva = Extenso::obtenerIdUltimaVersion($extenso_id);
+            $asignacionReplicada = false;
             if ($idVersionAnterior && $idVersionNueva) {
-                // Intentamos replicar, si falla no detenemos el proceso pero podríamos loguearlo
-                EvaluacionExtenso::replicarAsignacion($idVersionAnterior, $idVersionNueva);
+                // Si se replica correctamente, el extenso pasa directo a En Revisión.
+                $asignacionReplicada = EvaluacionExtenso::replicarAsignacion($idVersionAnterior, $idVersionNueva);
+            }
+
+            if ($asignacionReplicada) {
+                Extenso::actualizarEstatus($extenso_id, 'En Revisión');
+            } else {
+                // Fallback para casos sin revisores previos o si no se pudo replicar.
+                Extenso::actualizarEstatus($extenso_id, 'Pendiente de Filtro');
             }
 
             $pdo->commit();
