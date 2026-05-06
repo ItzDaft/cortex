@@ -370,6 +370,101 @@ class RevisorController {
         require_once BACKEND_ROOT . '/app/views/layout/footer.php';
     }
 
+    /**
+     * Muestra la gestión de versiones finales de extensos por área.
+     */
+    public function extensosFinales() {
+        if (!$this->autorizar()) return;
+        CSRFHelper::generateToken();
+
+        $coordinadorArea = Usuario::buscarPorId($_SESSION['usuario_id']);
+        if (empty($coordinadorArea['area_id'])) {
+            echo "Error: No tienes un área de especialización asignada.";
+            return;
+        }
+
+        $extensosFinales = Extenso::obtenerFinalesPorArea((int)$coordinadorArea['area_id']);
+
+        require_once BACKEND_ROOT . '/app/views/layout/header.php';
+        require_once BACKEND_ROOT . '/app/views/revisor/extensos_finales.php';
+        require_once BACKEND_ROOT . '/app/views/layout/footer.php';
+    }
+
+    /**
+     * Envía recordatorio por correo para subir/corregir versión final.
+     */
+    public function enviarRecordatorioExtensoFinal() {
+        header('Content-Type: application/json');
+        if (!$this->autorizar()) return;
+
+        $datos = json_decode(file_get_contents('php://input'), true);
+        $extenso_id = isset($datos['extenso_id']) ? (int)$datos['extenso_id'] : 0;
+        if ($extenso_id <= 0) {
+            http_response_code(400);
+            echo json_encode(['error' => 'ID de extenso inválido.']);
+            return;
+        }
+
+        $detalles = Extenso::obtenerDetallesParaNotificacion($extenso_id);
+        if (!$detalles) {
+            http_response_code(404);
+            echo json_encode(['error' => 'No se encontró información del extenso.']);
+            return;
+        }
+
+        $asunto = "Recordatorio de versión final de extenso - CCTI 2025";
+        $url = BASE_URL . 'resumen/misExtensos';
+        $cuerpo = "<h1>Hola, {$detalles['autor_nombre']}</h1>
+                   <p>Tu extenso <strong>{$detalles['titulo']}</strong> fue aceptado y requiere que subas o corrijas su versión final.</p>
+                   <p>Por favor inicia sesión en Cortex para completar el envío con autores, adscripciones e imágenes según lineamientos.</p>
+                   <p><a href='{$url}'>Ir a mis extensos</a></p>";
+
+        if (MailHelper::enviarCorreo($detalles['autor_correo'], $detalles['autor_nombre'], $asunto, $cuerpo)) {
+            echo json_encode(['mensaje' => 'Recordatorio enviado correctamente.']);
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => 'No se pudo enviar el correo de recordatorio.']);
+        }
+    }
+
+    /**
+     * Devuelve versión final al autor con observaciones.
+     */
+    public function devolverExtensoFinal() {
+        header('Content-Type: application/json');
+        if (!$this->autorizar()) return;
+
+        $datos = json_decode(file_get_contents('php://input'), true);
+        $extenso_id = isset($datos['extenso_id']) ? (int)$datos['extenso_id'] : 0;
+        $comentarios = trim((string)($datos['comentarios'] ?? ''));
+        if ($extenso_id <= 0 || $comentarios === '') {
+            http_response_code(400);
+            echo json_encode(['error' => 'Debes indicar extenso y observaciones.']);
+            return;
+        }
+
+        if (!Extenso::actualizarEstatusYComentarios($extenso_id, 'Corregir extenso final', $comentarios)) {
+            http_response_code(500);
+            echo json_encode(['error' => 'No se pudo actualizar el estado del extenso.']);
+            return;
+        }
+
+        $detalles = Extenso::obtenerDetallesParaNotificacion($extenso_id);
+        if ($detalles) {
+            $asunto = "Tu extenso final requiere correcciones";
+            $cuerpo = "<h1>Hola, {$detalles['autor_nombre']}</h1>
+                        <p>El coordinador revisó tu versión final del extenso <strong>{$detalles['titulo']}</strong> y solicitó correcciones.</p>
+                        <p><strong>Observaciones:</strong></p>
+                        <blockquote style='border-left: 4px solid #ccc; padding-left: 15px;'>
+                            <p><em>" . htmlspecialchars($comentarios) . "</em></p>
+                        </blockquote>
+                        <p>Ingresa a la plataforma para reemplazar el archivo final corregido.</p>";
+            MailHelper::enviarCorreo($detalles['autor_correo'], $detalles['autor_nombre'], $asunto, $cuerpo);
+        }
+
+        echo json_encode(['mensaje' => 'Extenso final devuelto con observaciones.']);
+    }
+
     public function aprobarFormatoExtenso() {
         header('Content-Type: application/json');
         if (!$this->autorizar()) return;

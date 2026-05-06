@@ -116,7 +116,7 @@ INSERT INTO `evaluaciones_extensos` (`id`, `extenso_version_id`, `revisor_id`, `
 CREATE TABLE `extensos` (
   `id` int NOT NULL,
   `resumen_id` int NOT NULL,
-  `estatus_extenso` enum('No Enviado','Pendiente de Filtro','Rechazado por Formato','Pendiente de Asignación','En Revisión','Aceptado con Correcciones','Aceptado Final','Rechazado','Conflicto') DEFAULT 'No Enviado',
+  `estatus_extenso` enum('No Enviado','Pendiente de Filtro','Rechazado por Formato','Pendiente de Asignación','En Revisión','Aceptado con Correcciones','Aceptado Final','Corregir extenso final','Rechazado','Conflicto') DEFAULT 'No Enviado',
   `comentarios_formato` text
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 

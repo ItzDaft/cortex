@@ -10,6 +10,17 @@ if (isset($revisor['area_id'])) {
 <div class="container-fluid px-4">
     <h1 class="mt-4">Panel de Coordinación: <?php echo htmlspecialchars($areaNombre); ?></h1>
     <p class="lead text-muted">Bienvenido. Selecciona el módulo que deseas gestionar.</p>
+    <div class="mb-3">
+        <a href="<?php echo BASE_URL; ?>revisor/gestionExtensos" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-journal-text"></i> Gestión de extensos
+        </a>
+        <a href="<?php echo BASE_URL; ?>revisor/extensosFinales" class="btn btn-primary btn-sm">
+            <i class="bi bi-journal-check"></i> Extensos finales
+        </a>
+        <a href="<?php echo BASE_URL; ?>revisor/supervisionEvaluaciones" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-eye"></i> Supervisión evaluaciones
+        </a>
+    </div>
     
     <?php CSRFHelper::getTokenInput(); ?>
     <div id="mensaje-dashboard"></div>

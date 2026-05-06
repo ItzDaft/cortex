@@ -76,10 +76,10 @@
                                 <?php else: ?>
                                     <p class="text-danger">Ya has alcanzado el número máximo de envíos para este artículo.</p>
                                 <?php endif; ?>
-                            <?php elseif ($extenso['estatus_extenso'] == 'Aceptado Final'): ?>
+                            <?php elseif (in_array($extenso['estatus_extenso'], ['Aceptado Final', 'Corregir extenso final'], true)): ?>
                                 <a href="<?php echo BASE_URL; ?>extenso/subirFinal/<?php echo $extenso['id']; ?>" class="btn btn-primary">
                                     <i class="bi bi-journal-check"></i>
-                                    <?php echo !empty($extenso['version_final']) ? 'Reemplazar versión final (PDF revista)' : 'Subir versión final (PDF revista)'; ?>
+                                    <?php echo !empty($extenso['version_final']) ? 'Reemplazar versión final (.doc/.docx)' : 'Subir versión final (.doc/.docx)'; ?>
                                 </a>
                             <?php endif; ?>
                         </div>
@@ -96,8 +96,8 @@
                             <?php endforeach; ?>
                         </ul>
 
-                        <?php if ($extenso['estatus_extenso'] == 'Aceptado Final'): ?>
-                            <h5 class="mt-4">Versión final para la revista (PDF)</h5>
+                        <?php if (in_array($extenso['estatus_extenso'], ['Aceptado Final', 'Corregir extenso final'], true)): ?>
+                            <h5 class="mt-4">Versión final para la revista (.doc/.docx)</h5>
                             <?php if (!empty($extenso['version_final'])): ?>
                                 <ul class="list-group">
                                     <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">

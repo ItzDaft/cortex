@@ -44,6 +44,7 @@
                                             if ($estatus_extenso == 'Aceptado Final') $badge_class_extenso = 'bg-success';
                                             if ($estatus_extenso == 'Rechazado') $badge_class_extenso = 'bg-danger';
                                             if ($estatus_extenso == 'Aceptado con Correcciones') $badge_class_extenso = 'bg-warning text-dark';
+                                            if ($estatus_extenso == 'Corregir extenso final') $badge_class_extenso = 'bg-warning text-dark';
                                             if ($estatus_extenso == 'En Revisión' || $estatus_extenso == 'Conflicto') $badge_class_extenso = 'bg-info';
                                         ?>
                                         <span class="badge <?php echo $badge_class_extenso; ?>"><?php echo $estatus_extenso; ?></span>

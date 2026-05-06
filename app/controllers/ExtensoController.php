@@ -248,6 +248,10 @@ public function procesarReenvio($extenso_id) {
                 throw new Exception('No se pudo registrar el archivo en la base de datos.');
             }
 
+            if (($ctx['estatus_extenso'] ?? '') === 'Corregir extenso final') {
+                Extenso::actualizarEstatus($extenso_id, 'Aceptado Final');
+            }
+
             echo json_encode(['mensaje' => 'Versión final enviada con éxito.']);
         } catch (Exception $e) {
             http_response_code(400);

@@ -220,18 +220,18 @@ class Extenso {
      */
     public static function obtenerParaSubidaVersionFinal(int $extenso_id, int $autor_id): ?array {
         $pdo = Database::conectar();
-        $sql = 'SELECT e.id AS extenso_id, e.estatus_extenso, e.resumen_id,
+        $sql = 'SELECT e.id AS extenso_id, e.estatus_extenso, e.comentarios_formato, e.resumen_id,
                        r.titulo, r.autor_principal, r.coautores, r.adscripcion1, r.adscripcion2,
                        evf.archivo_ruta AS vf_archivo_ruta, evf.fecha_envio AS vf_fecha_envio
                 FROM extensos e
                 INNER JOIN resumenes r ON e.resumen_id = r.id
                 LEFT JOIN extenso_version_final evf ON evf.extenso_id = e.id
-                WHERE e.id = :extenso_id AND r.autor_id = :autor_id AND e.estatus_extenso = :estatus';
+                WHERE e.id = :extenso_id AND r.autor_id = :autor_id
+                AND e.estatus_extenso IN ("Aceptado Final", "Corregir extenso final")';
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
             'extenso_id' => $extenso_id,
-            'autor_id'   => $autor_id,
-            'estatus'    => 'Aceptado Final',
+            'autor_id'   => $autor_id
         ]);
         $row = $stmt->fetch();
         return $row ?: null;
@@ -307,6 +307,36 @@ class Extenso {
         $stmt = $pdo->prepare($sql);
         $stmt->execute(['extenso_id' => $extenso_id]);
         return $stmt->fetch();
+    }
+
+    /**
+     * Obtiene extensos en etapa final por área para gestión del coordinador.
+     */
+    public static function obtenerFinalesPorArea(int $area_id): array {
+        $pdo = Database::conectar();
+        $sql = "SELECT
+                    e.id,
+                    e.estatus_extenso,
+                    e.comentarios_formato,
+                    r.titulo,
+                    r.autor_principal,
+                    u.nombre_completo AS autor_nombre,
+                    u.correo AS autor_correo,
+                    evf.archivo_ruta AS archivo_final_ruta,
+                    evf.fecha_envio AS fecha_envio_final
+                FROM extensos e
+                INNER JOIN resumenes r ON e.resumen_id = r.id
+                INNER JOIN usuarios u ON r.autor_id = u.id
+                LEFT JOIN extenso_version_final evf ON evf.extenso_id = e.id
+                WHERE r.area_id = :area_id
+                  AND e.estatus_extenso IN ('Aceptado Final', 'Corregir extenso final')
+                ORDER BY
+                    CASE WHEN evf.archivo_ruta IS NULL THEN 0 ELSE 1 END DESC,
+                    evf.fecha_envio DESC,
+                    e.id DESC";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute(['area_id' => $area_id]);
+        return $stmt->fetchAll();
     }
 
     /**

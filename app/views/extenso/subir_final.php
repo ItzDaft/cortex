@@ -3,6 +3,15 @@
         <h1 class="mb-3"><?php echo htmlspecialchars($subir_final['titulo']); ?></h1>
         <p class="lead text-muted mb-4">Versión final para envío a la revista</p>
 
+        <?php if (($subir_final['estatus_extenso'] ?? '') === 'Corregir extenso final'): ?>
+            <div class="alert alert-warning">
+                <strong>El coordinador solicitó correcciones en tu versión final.</strong>
+                <?php if (!empty($subir_final['comentarios_formato'] ?? '')): ?>
+                    <div class="mt-2"><?php echo nl2br(htmlspecialchars($subir_final['comentarios_formato'])); ?></div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
         <div class="alert alert-primary">
             <p class="mb-2"><strong>Este documento es la versión definitiva</strong> que se remitirá a la revista. Debe entregarse <strong>en un solo archivo .doc .docx</strong>.</p>
             <p class="mb-2">El documento debe incluir de forma completa y visible:</p>
@@ -50,7 +59,7 @@
                         <small class="form-text text-muted">Formato de archivo permitido: .doc, .docx</small>
                     </div>
                     <button type="submit" id="submitBtnFinal" class="btn btn-success">
-                        <?php echo !empty($subir_final['vf_archivo_ruta']) ? 'Reemplazar versión final' : 'Enviar versión final'; ?>
+                    <?php echo !empty($subir_final['vf_archivo_ruta']) ? 'Reemplazar versión final' : 'Enviar versión final'; ?>
                     </button>
                     <a href="<?php echo BASE_URL; ?>resumen/misExtensos" class="btn btn-outline-secondary ms-2">Volver a mis extensos</a>
                 </form>
