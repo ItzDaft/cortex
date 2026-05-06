@@ -171,7 +171,7 @@ public function procesarReenvio($extenso_id) {
     }
 
     /**
-     * Formulario para subir el PDF final (versión para revista).
+     * Formulario para subir el archivo final (versión para revista).
      */
     public function subirFinal($extenso_id) {
         if (!isset($_SESSION['usuario_id']) || !in_array('Autor', $_SESSION['usuario_roles'])) {
@@ -190,7 +190,7 @@ public function procesarReenvio($extenso_id) {
     }
 
     /**
-     * Procesa la subida del PDF final (un solo archivo por extenso; reemplaza si ya existía).
+     * Procesa la subida del archivo final (un solo archivo por extenso; reemplaza si ya existía).
      */
     public function procesarSubidaFinal($extenso_id) {
         ini_set('display_errors', 0);
@@ -217,8 +217,16 @@ public function procesarReenvio($extenso_id) {
             $mime = finfo_file($finfo, $archivo['tmp_name']);
             finfo_close($finfo);
 
-            if ($mime !== 'application/pdf') {
-                throw new Exception('Formato de archivo no permitido. Solo se aceptan archivos PDF.');
+            $extPermitidas = ['doc', 'docx'];
+            $mimesPermitidos = [
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/octet-stream'
+            ];
+            $extension = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
+
+            if (!in_array($extension, $extPermitidas, true) || !in_array($mime, $mimesPermitidos, true)) {
+                throw new Exception('Formato de archivo no permitido. Solo se aceptan archivos .doc y .docx.');
             }
 
             $directorioSubida = BACKEND_ROOT . '/uploads/extensos_finales/';
@@ -226,7 +234,6 @@ public function procesarReenvio($extenso_id) {
                 mkdir($directorioSubida, 0777, true);
             }
 
-            $extension = pathinfo($archivo['name'], PATHINFO_EXTENSION);
             $nombreUnico = 'extenso_' . $extenso_id . '_final_' . time() . '.' . $extension;
             $rutaCompleta = $directorioSubida . $nombreUnico;
 

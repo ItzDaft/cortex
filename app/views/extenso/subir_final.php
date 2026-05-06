@@ -4,8 +4,8 @@
         <p class="lead text-muted mb-4">Versión final para envío a la revista</p>
 
         <div class="alert alert-primary">
-            <p class="mb-2"><strong>Este documento es la versión definitiva</strong> que se remitirá a la revista. Debe entregarse <strong>en un solo archivo PDF</strong>.</p>
-            <p class="mb-2">El PDF debe incluir de forma completa y visible:</p>
+            <p class="mb-2"><strong>Este documento es la versión definitiva</strong> que se remitirá a la revista. Debe entregarse <strong>en un solo archivo .doc .docx</strong>.</p>
+            <p class="mb-2">El documento debe incluir de forma completa y visible:</p>
             <ul class="mb-2">
                 <li><strong>Autor(es):</strong> <?php echo htmlspecialchars((string) ($subir_final['autor_principal'] ?? '')); ?></li>
                 <?php if (!empty(trim((string) ($subir_final['coautores'] ?? '')))): ?>
@@ -29,7 +29,7 @@
         <?php if (!empty($subir_final['vf_archivo_ruta'])): ?>
             <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2">
                 <span>
-                    Ya envió un PDF final el <?php echo date('d/m/Y H:i', strtotime($subir_final['vf_fecha_envio'])); ?>.
+                    Ya envió un archivo final el <?php echo date('d/m/Y H:i', strtotime($subir_final['vf_fecha_envio'])); ?>.
                     Puede sustituirlo subiendo un nuevo archivo.
                 </span>
                 <a href="<?php echo BASE_URL; ?>archivo/ver/extensos_finales/<?php echo htmlspecialchars($subir_final['vf_archivo_ruta']); ?>" target="_blank" class="btn btn-sm btn-outline-primary">
@@ -45,8 +45,9 @@
                 <form id="formSubirFinal" enctype="multipart/form-data">
                     <?php CSRFHelper::getTokenInput(); ?>
                     <div class="mb-3">
-                        <label for="archivo_extenso" class="form-label">Archivo PDF de la versión final</label>
-                        <input class="form-control" type="file" id="archivo_extenso" name="archivo_extenso" accept=".pdf,application/pdf" required>
+                        <label for="archivo_extenso" class="form-label">Archivo doc o docx de la versión final</label>
+                        <input class="form-control" type="file" id="archivo_extenso" name="archivo_extenso" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required>
+                        <small class="form-text text-muted">Formato de archivo permitido: .doc, .docx</small>
                     </div>
                     <button type="submit" id="submitBtnFinal" class="btn btn-success">
                         <?php echo !empty($subir_final['vf_archivo_ruta']) ? 'Reemplazar versión final' : 'Enviar versión final'; ?>
