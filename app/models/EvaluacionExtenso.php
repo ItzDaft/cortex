@@ -348,17 +348,53 @@ public static function asignarTercerRevisor(int $extenso_version_id, int $reviso
 
         if (!empty($estatus_final_extenso)) {
             $extenso = Extenso::buscarPorVersionId($extenso_version_id);
-            
-            Extenso::actualizarEstatus($extenso['id'], $estatus_final_extenso);
-            
+            if (!$extenso) {
+                return;
+            }
+
+            $estatusAnterior = (string)($extenso['estatus_extenso'] ?? '');
+            $esPrimerCambioAFinal = ($estatus_final_extenso === 'Aceptado Final' && $estatusAnterior !== 'Aceptado Final');
+
+            Extenso::actualizarEstatus((int)$extenso['id'], $estatus_final_extenso);
+
             if ($estatus_final_extenso !== 'Conflicto') {
                 $autor = Usuario::buscarPorId($extenso['autor_id']);
-                MailHelper::enviarCorreo(
-                    $autor['correo'], 
-                    $autor['nombre_completo'], 
-                    'Actualización sobre tu Artículo Extenso', 
-                    "<h1>Hola {$autor['nombre_completo']}</h1><p>El estatus de tu artículo ha cambiado a: <strong>{$estatus_final_extenso}</strong>. Por favor ingresa a la plataforma para ver detalles.</p>"
-                );
+                if ($autor) {
+                    MailHelper::enviarCorreo(
+                        $autor['correo'],
+                        $autor['nombre_completo'],
+                        'Actualización sobre tu Artículo Extenso',
+                        "<h1>Hola {$autor['nombre_completo']}</h1><p>El estatus de tu artículo ha cambiado a: <strong>{$estatus_final_extenso}</strong>. Por favor ingresa a la plataforma para ver detalles.</p>"
+                    );
+                }
+            }
+
+            // Cuando ambos revisores dictaminan favorable/publicable y pasa a final por primera vez,
+            // invitamos al autor a subir el documento editable con toda la información editorial.
+            if ($esPrimerCambioAFinal) {
+                $autor = Usuario::buscarPorId($extenso['autor_id']);
+                if ($autor) {
+                    $urlSubida = rtrim(BASE_URL, '/') . '/extenso/subirFinal/' . (int)$extenso['id'];
+                    $cuerpoInvitacion = "
+                        <h1>Hola {$autor['nombre_completo']}</h1>
+                        <p>Tu extenso fue dictaminado como <strong>Favorable y Publicable</strong> por ambos revisores y ahora se encuentra en estatus <strong>Aceptado Final</strong>.</p>
+                        <p>Te invitamos a ingresar a la plataforma para subir tu extenso en formato <strong>.doc</strong> o <strong>.docx</strong>, incluyendo:</p>
+                        <ul>
+                            <li>Información completa de autores y coautores.</li>
+                            <li>Dependencias/adscripciones institucionales.</li>
+                            <li>Imágenes y demás elementos requeridos para publicación.</li>
+                        </ul>
+                        <p>Puedes realizar la carga en el siguiente enlace:</p>
+                        <p><a href=\"{$urlSubida}\">{$urlSubida}</a></p>
+                    ";
+
+                    MailHelper::enviarCorreo(
+                        $autor['correo'],
+                        $autor['nombre_completo'],
+                        'Invitación para envío de extenso en formato editable',
+                        $cuerpoInvitacion
+                    );
+                }
             }
         }
     }
