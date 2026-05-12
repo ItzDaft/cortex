@@ -639,11 +639,10 @@ class RevisorController {
         }
 
         try {
-            $fechaAsignacion = new DateTime($evaluacion['fecha_asignacion']);
-            $fechaLimite = clone $fechaAsignacion;
-            $fechaLimite->modify('+15 days'); 
-            $hoy = new DateTime();
-            
+            $fechaAsignacion = EvaluacionExtenso::fechaInicioPlazoEvaluacion($evaluacion['fecha_asignacion']);
+            $fechaLimite = EvaluacionExtenso::fechaLimitePlazoEvaluacion($evaluacion['fecha_asignacion']);
+            $hoy = new DateTime('today');
+
             $intervalo = $hoy->diff($fechaLimite);
             $esVencido = ($hoy > $fechaLimite);
             $dias = $intervalo->days;

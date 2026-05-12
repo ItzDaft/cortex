@@ -53,6 +53,20 @@ class RevisorExtensosController {
         header('Content-Type: application/json');
         if (!isset($_SESSION['usuario_id'])) { http_response_code(403); echo json_encode(['error' => 'Permisos insuficientes.']); return; }
 
+        $evaluacion = EvaluacionExtenso::buscarPorId((int)$evaluacion_id);
+        if (!$evaluacion || (int)$evaluacion['revisor_id'] !== (int)$_SESSION['usuario_id']) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Permisos insuficientes.']);
+            return;
+        }
+        if (EvaluacionExtenso::plazoEvaluacionExtensoEstaVencido($evaluacion['fecha_asignacion'] ?? null)) {
+            http_response_code(400);
+            echo json_encode([
+                'error' => 'El plazo de ' . EvaluacionExtenso::PLAZO_EVALUACION_EXTENSO_DIAS . ' días para evaluar este extenso ha vencido. Contacte al coordinador de su área.'
+            ]);
+            return;
+        }
+
         $datos_post = $_POST;
         for ($i = 1; $i <= 6; $i++) {
             if (empty($datos_post['pregunta_'.$i])) { http_response_code(400); echo json_encode(['error' => 'Responde todas las preguntas.']); return; }

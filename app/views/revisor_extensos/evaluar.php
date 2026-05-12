@@ -14,6 +14,29 @@ $arg_rechazo      = $evaluacion['argumento_rechazo'] ?? '';
 <h2 class="mb-3">Evaluación de Artículo Extenso</h2>
 <a href="<?php echo BASE_URL; ?>revisorExtensos/dashboard">&laquo; Volver al panel</a>
 
+<?php
+$limPlazo = EvaluacionExtenso::fechaLimitePlazoEvaluacion($evaluacion['fecha_asignacion'] ?? null);
+$plazoVencido = EvaluacionExtenso::plazoEvaluacionExtensoEstaVencido($evaluacion['fecha_asignacion'] ?? null);
+$alertPlazoClass = $plazoVencido ? 'alert-danger' : 'alert-info';
+$txtPlazo = 'Plazo de evaluación: ';
+if ($limPlazo) {
+    $txtPlazo .= 'fecha límite <strong>' . htmlspecialchars($limPlazo->format('d/m/Y')) . '</strong>. ';
+    $hoy = new DateTime('today');
+    $diff = $hoy->diff($limPlazo);
+    $d = (int)$diff->days;
+    if ($plazoVencido) {
+        $txtPlazo .= 'El plazo de <strong>' . (int)EvaluacionExtenso::PLAZO_EVALUACION_EXTENSO_DIAS . '</strong> días naturales ya venció (hace ' . $d . ' días).';
+    } elseif ($d === 0) {
+        $txtPlazo .= '<strong>Vence hoy</strong>.';
+    } else {
+        $txtPlazo .= 'Quedan <strong>' . $d . '</strong> día' . ($d !== 1 ? 's' : '') . '.';
+    }
+} else {
+    $txtPlazo .= 'sin fecha de asignación registrada; contacte al coordinador si necesita el plazo.';
+}
+?>
+<div class="alert <?php echo $alertPlazoClass; ?> my-3 py-2 small mb-0" role="alert"><?php echo $txtPlazo; ?></div>
+
 <div class="card my-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5>Artículo: "<?php echo htmlspecialchars($evaluacion['titulo']); ?>"</h5>
@@ -161,7 +184,7 @@ $arg_rechazo      = $evaluacion['argumento_rechazo'] ?? '';
                 <textarea class="form-control" id="argumento_rechazo" name="argumento_rechazo" rows="4"><?php echo htmlspecialchars($arg_rechazo); ?></textarea>
             </div>
 
-            <button type="submit" class="btn btn-success" id="submitBtn">Enviar Evaluación</button>
+            <button type="submit" class="btn btn-success" id="submitBtn"<?php echo !empty($plazoVencido) ? ' disabled title="Plazo vencido; contacte al coordinador."' : ''; ?>>Enviar Evaluación</button>
             <button type="button" id="guardarBorradorBtn" class="btn btn-secondary">Guardar Borrador</button>
 
         </form>

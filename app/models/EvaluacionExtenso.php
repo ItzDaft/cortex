@@ -1,8 +1,41 @@
 <?php
 
 class EvaluacionExtenso {
-    
-/**
+
+    /** Días naturales desde fecha_asignacion para completar la evaluación del extenso. */
+    public const PLAZO_EVALUACION_EXTENSO_DIAS = 7;
+
+    /** Inicio del cómputo del plazo (solo fecha). */
+    public static function fechaInicioPlazoEvaluacion(?string $fecha_asignacion): ?DateTime {
+        if (empty($fecha_asignacion)) {
+            return null;
+        }
+        $d = new DateTime($fecha_asignacion);
+        $d->setTime(0, 0, 0);
+        return $d;
+    }
+
+    /** Último día del plazo (inclusive) según fecha_asignacion. */
+    public static function fechaLimitePlazoEvaluacion(?string $fecha_asignacion): ?DateTime {
+        $inicio = self::fechaInicioPlazoEvaluacion($fecha_asignacion);
+        if ($inicio === null) {
+            return null;
+        }
+        $limite = clone $inicio;
+        $limite->modify('+' . self::PLAZO_EVALUACION_EXTENSO_DIAS . ' days');
+        return $limite;
+    }
+
+    public static function plazoEvaluacionExtensoEstaVencido(?string $fecha_asignacion): bool {
+        $limite = self::fechaLimitePlazoEvaluacion($fecha_asignacion);
+        if ($limite === null) {
+            return false;
+        }
+        $hoy = new DateTime('today');
+        return $hoy > $limite;
+    }
+
+    /**
      * Crea los registros iniciales de evaluación cuando se asignan revisores.
      * MEJORA: Se registra la fecha_asignacion con NOW().
      */

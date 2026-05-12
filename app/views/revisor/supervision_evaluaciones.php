@@ -236,62 +236,56 @@
                         <?php else: ?>
                             <?php foreach ($asignacionesExtensos as $asig): ?>
                                 <?php 
-                                    
                                     $estatusRaw = $asig['estatus_evaluacion'] ?? 'Pendiente';
                                     $fechaRaw = $asig['fecha_asignacion'] ?? null;
-                                    
-                                    $esPendiente = (stripos($estatusRaw, 'Pendiente') !== false);
+                                    $enProceso = (stripos($estatusRaw, 'En Proceso') !== false);
 
                                     $htmlFechas = '<span class="text-muted small">-</span>';
-                                    $htmlTiempo = '<span class="badge bg-secondary">Finalizado</span>';
+                                    $htmlTiempo = '<span class="badge bg-secondary">Evaluado</span>';
                                     $claseTiempo = '';
-                                    $mostrarCampana = true; 
 
-                                    if (!empty($fechaRaw)) {
+                                    $fInicio = EvaluacionExtenso::fechaInicioPlazoEvaluacion($fechaRaw);
+                                    $fLimite = EvaluacionExtenso::fechaLimitePlazoEvaluacion($fechaRaw);
+
+                                    if ($fInicio !== null && $fLimite !== null) {
                                         try {
-                                            $fInicio = new DateTime($fechaRaw);
-                                            $fLimite = (clone $fInicio)->modify('+15 days');
-                                            $hoy = new DateTime('today'); // Solo la fecha, sin hora
-                                            
                                             $htmlFechas = '<div style="font-size: 0.8rem; line-height: 1.4;">
                                                             <div class="text-muted"><i class="bi bi-calendar-check me-1"></i>Asig: ' . $fInicio->format('d/m/Y') . '</div>
                                                             <div class="fw-bold text-dark"><i class="bi bi-flag-fill me-1"></i>Lim: ' . $fLimite->format('d/m/Y') . '</div>
                                                            </div>';
 
-                                            $diff = $hoy->diff($fLimite);
-                                            $dias = (int)$diff->days;
+                                            if ($enProceso) {
+                                                $hoy = new DateTime('today');
+                                                $diff = $hoy->diff($fLimite);
+                                                $dias = (int)$diff->days;
+                                                $esVencido = ($diff->invert === 1);
 
-                                            $esVencido = ($diff->invert === 1); 
-
-                                            if ($esVencido) {
-                                                $htmlTiempo = "Vencido hace <strong>{$dias} días</strong>";
-                                                $claseTiempo = 'text-danger fw-bold';
-                                                $mostrarCampana = true;
-                                            } elseif ($dias == 0) {
-                                                $htmlTiempo = "Vence <strong>HOY</strong>";
-                                                $claseTiempo = 'text-danger fw-bold';
-                                                $mostrarCampana = true;
-                                            } elseif ($dias <= 3) {
-                                                $htmlTiempo = "Quedan <strong>{$dias} días</strong>";
-                                                $claseTiempo = 'text-danger fw-bold';
-                                                $mostrarCampana = true;
-                                            } elseif ($dias <= 7) {
-                                                $htmlTiempo = "Quedan <strong>{$dias} días</strong>";
-                                                $claseTiempo = 'text-warning text-dark fw-bold';
-                                                $mostrarCampana = true;
-                                            } else {
-                                                $htmlTiempo = "Quedan <strong>{$dias} días</strong>";
-                                                $claseTiempo = 'text-success fw-bold';
-                                                $mostrarCampana = true;
+                                                if ($esVencido) {
+                                                    $htmlTiempo = "Vencido hace <strong>{$dias} días</strong>";
+                                                    $claseTiempo = 'text-danger fw-bold';
+                                                } elseif ($dias == 0) {
+                                                    $htmlTiempo = "Vence <strong>HOY</strong>";
+                                                    $claseTiempo = 'text-danger fw-bold';
+                                                } elseif ($dias <= 3) {
+                                                    $htmlTiempo = "Quedan <strong>{$dias} días</strong>";
+                                                    $claseTiempo = 'text-danger fw-bold';
+                                                } elseif ($dias <= 5) {
+                                                    $htmlTiempo = "Quedan <strong>{$dias} días</strong>";
+                                                    $claseTiempo = 'text-warning text-dark fw-bold';
+                                                } else {
+                                                    $htmlTiempo = "Quedan <strong>{$dias} días</strong>";
+                                                    $claseTiempo = 'text-success fw-bold';
+                                                }
                                             }
                                         } catch (Exception $e) {
                                             $htmlTiempo = '<span class="text-danger small">Error Fecha</span>';
                                             error_log('Error en procesamiento de fecha: ' . $e->getMessage());
                                         }
-                                    } else {
+                                    } elseif (empty($fechaRaw)) {
                                         $htmlFechas = '<span class="badge bg-warning text-dark">Sin fecha</span>';
-                                        $htmlTiempo = '<span class="text-muted small">No calculable</span>';
-                                        $mostrarCampana = false;
+                                        $htmlTiempo = $enProceso
+                                            ? '<span class="text-muted small">No calculable</span>'
+                                            : '<span class="badge bg-secondary">Evaluado</span>';
                                     }
                                 ?>
 

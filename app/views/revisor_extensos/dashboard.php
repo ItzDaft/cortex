@@ -10,16 +10,39 @@
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
-                    <thead class="table-light"><tr><th>Título</th><th>Versión</th><th>Fecha Asignación</th><th class="text-center">Acción</th></tr></thead>
+                    <thead class="table-light"><tr><th>Título</th><th>Versión</th><th>Fecha Asignación</th><th>Fecha límite</th><th>Días restantes</th><th class="text-center">Acción</th></tr></thead>
                     <tbody>
                         <?php if (empty($evaluacionesPorEvaluar)): ?>
-                            <tr><td colspan="4" class="text-center text-muted py-3">No tienes evaluaciones pendientes.</td></tr>
+                            <tr><td colspan="6" class="text-center text-muted py-3">No tienes evaluaciones pendientes.</td></tr>
                         <?php else: ?>
                             <?php foreach ($evaluacionesPorEvaluar as $eval): ?>
+                                <?php
+                                    $lim = EvaluacionExtenso::fechaLimitePlazoEvaluacion($eval['fecha_asignacion'] ?? null);
+                                    $txtLim = $lim ? $lim->format('d/m/Y') : '-';
+                                    $txtDias = '-';
+                                    $claseDias = 'text-muted';
+                                    if ($lim) {
+                                        $hoy = new DateTime('today');
+                                        $diff = $hoy->diff($lim);
+                                        $d = (int)$diff->days;
+                                        if ($diff->invert === 1) {
+                                            $txtDias = 'Vencido (' . $d . ' d.)';
+                                            $claseDias = 'text-danger fw-semibold';
+                                        } elseif ($d === 0) {
+                                            $txtDias = 'Vence hoy';
+                                            $claseDias = 'text-danger fw-semibold';
+                                        } else {
+                                            $txtDias = (string)$d;
+                                            $claseDias = $d <= 3 ? 'text-danger fw-semibold' : ($d <= 5 ? 'text-warning fw-semibold' : 'text-success');
+                                        }
+                                    }
+                                ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($eval['titulo']); ?></td>
                                     <td><span class="badge bg-secondary">v<?php echo $eval['intento']; ?></span></td>
                                     <td><?php echo !empty($eval['fecha_asignacion']) ? date('d/m/Y', strtotime($eval['fecha_asignacion'])) : '-'; ?></td>
+                                    <td><?php echo htmlspecialchars($txtLim); ?></td>
+                                    <td class="<?php echo $claseDias; ?>"><?php echo htmlspecialchars($txtDias); ?></td>
                                     <td class="text-center">
                                         <!-- Botón para ver archivo -->
                                         <a href="<?php echo BASE_URL; ?>archivo/ver/extensos/<?php echo $eval['archivo_ruta']; ?>" target="_blank" class="btn btn-outline-secondary btn-sm" title="Ver Artículo">
