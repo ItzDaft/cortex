@@ -88,6 +88,19 @@
             </div>
         </div>
     </div>
+    <div class="col-md-6 mb-3">
+            <div class="card h-100 border-info shadow-sm">
+                <div class="card-body text-center">
+                    <div class="mb-3 text-info"><i class="bi bi-people-fill fs-1"></i></div>
+                    <h4 class="card-title">Extensos versiones finales</h4>
+                    <p class="card-text text-muted">Consulta los extensos con sus versiones finales  para ser enviados a la revista.</p>
+                    <a href="<?php echo BASE_URL; ?>revisor/extensosFinales" class="btn btn-primary btn-sm">
+            <i class="bi bi-journal-check"></i> Extensos finales
+        </a>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="col-md-4 mb-3">
             <div class="card h-100 border-success shadow-sm">
                 <div class="card-body text-center">
