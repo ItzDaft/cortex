@@ -542,6 +542,18 @@ class RevisorController {
         $stmtArea->execute([$usuario_id]);
         $area_id = $stmtArea->fetchColumn();
         $historialSeguimiento = EvaluacionExtenso::obtenerHistorialSeguimientoPorArea((int)$area_id);
+        $historialSeguimientoAceptados = [];
+        $historialSeguimientoPendientes = [];
+        foreach ($historialSeguimiento as $itemHistorial) {
+            $estatusExtenso = (string)($itemHistorial['estatus_extenso'] ?? '');
+            if (EvaluacionExtenso::esHistorialExtensoAceptadoPorPares($estatusExtenso)) {
+                $historialSeguimientoAceptados[] = $itemHistorial;
+            } else {
+                $historialSeguimientoPendientes[] = $itemHistorial;
+            }
+        }
+        $historialSeguimientoAceptados = array_values($historialSeguimientoAceptados);
+        $historialSeguimientoPendientes = array_values($historialSeguimientoPendientes);
 
         $sql = "
             SELECT 

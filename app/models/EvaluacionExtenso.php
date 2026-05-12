@@ -529,6 +529,14 @@ public static function obtenerDetallesDeAsignacionesPorArea(int $area_id): array
     }
 
     /**
+     * Historial de supervisión: el extenso ya tiene consenso favorable/publicable por revisores
+     * o está en ajuste de versión final tras ese consenso.
+     */
+    public static function esHistorialExtensoAceptadoPorPares(string $estatus): bool {
+        return in_array($estatus, ['Aceptado Final', 'Corregir extenso final'], true);
+    }
+
+    /**
      * Construye un historial completo de seguimiento por resumen para supervisión.
      * Incluye todas las versiones (Rev1, Rev2, ... ) y la versión final si existe.
      */
@@ -538,6 +546,7 @@ public static function obtenerDetallesDeAsignacionesPorArea(int $area_id): array
         $sqlVersiones = "SELECT
                             r.id AS resumen_id,
                             r.titulo AS titulo_articulo,
+                            e.estatus_extenso,
                             ev.intento AS version_intento,
                             ee.id AS evaluacion_id,
                             u.nombre_completo AS nombre_revisor,
@@ -586,6 +595,7 @@ public static function obtenerDetallesDeAsignacionesPorArea(int $area_id): array
                 $agrupado[$resumenId] = [
                     'resumen_id' => $resumenId,
                     'titulo' => $row['titulo_articulo'] ?? 'Sin titulo',
+                    'estatus_extenso' => (string)($row['estatus_extenso'] ?? ''),
                     'filas' => []
                 ];
             }
