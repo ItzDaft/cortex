@@ -971,12 +971,23 @@ public function exportarPagosReportes() {
             return;
         }
 
-        // Determine max evaluations for any extenso to build dynamic headers
-        $maxEvals = 0;
+        // Determine the overall maximum number of versions and the maximum evaluations per version
+        $maxVersions = 0;
+        $maxEvalsPerVersion = 0;
+
         foreach ($extensos as $ext) {
-            $numEvals = count($ext['evaluaciones']);
-            if ($numEvals > $maxEvals) {
-                $maxEvals = $numEvals;
+            if (isset($ext['versiones_evaluadas'])) {
+                $numVersions = count($ext['versiones_evaluadas']);
+                if ($numVersions > $maxVersions) {
+                    $maxVersions = $numVersions;
+                }
+
+                foreach ($ext['versiones_evaluadas'] as $version => $evals) {
+                    $numEvals = count($evals);
+                    if ($numEvals > $maxEvalsPerVersion) {
+                        $maxEvalsPerVersion = $numEvals;
+                    }
+                }
             }
         }
 
@@ -987,11 +998,15 @@ public function exportarPagosReportes() {
         // Agregamos BOM para correcta visualización en Excel
         fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
 
+        // Build dynamic headers based on max versions and max evaluations
         $headers = ['ID', 'Nombre del Extenso', 'Autor Principal', 'Área Temática'];
-        for ($i = 1; $i <= $maxEvals; $i++) {
-            $headers[] = "Revisor ($i)";
-            $headers[] = "Fecha Eval ($i)";
-            $headers[] = "Comentarios ($i)";
+        for ($v = 1; $v <= $maxVersions; $v++) {
+            for ($e = 1; $e <= $maxEvalsPerVersion; $e++) {
+                $headers[] = "V{$v} - Revisor {$e} (Alias)";
+                $headers[] = "V{$v} - Revisor {$e} (Veredicto)";
+                $headers[] = "V{$v} - Revisor {$e} (Fecha)";
+                $headers[] = "V{$v} - Revisor {$e} (Comentarios)";
+            }
         }
         fputcsv($output, $headers);
 
@@ -1003,16 +1018,30 @@ public function exportarPagosReportes() {
                 $ext['nombre_area']
             ];
 
-            $evals = $ext['evaluaciones'];
-            for ($i = 0; $i < $maxEvals; $i++) {
-                if (isset($evals[$i])) {
-                    $row[] = $evals[$i]['alias'];
-                    $row[] = $evals[$i]['fecha_evaluacion'];
-                    $row[] = $evals[$i]['observaciones'];
-                } else {
-                    $row[] = '';
-                    $row[] = '';
-                    $row[] = '';
+            $versionesList = array_values($ext['versiones_evaluadas'] ?? []);
+
+            for ($v = 0; $v < $maxVersions; $v++) {
+                $evalsForVersion = $versionesList[$v] ?? [];
+
+                for ($e = 0; $e < $maxEvalsPerVersion; $e++) {
+                    if (isset($evalsForVersion[$e])) {
+                        $eval = $evalsForVersion[$e];
+                        $row[] = $eval['alias'];
+                        $row[] = $eval['veredicto'];
+                        // Explicit string cast or space prepended can help Excel not parse weird dates,
+                        // but DATE_FORMAT '%d/%m/%Y %H:%i' in the query is usually well supported.
+                        $row[] = $eval['fecha_evaluacion'];
+
+                        // Clean up newlines in comments for better CSV aesthetic
+                        $comentarios = str_replace(["\r\n", "\r", "\n"], " ", $eval['observaciones']);
+                        $row[] = $comentarios;
+                    } else {
+                        // Fill empty cells if this version/evaluator slot is missing
+                        $row[] = '';
+                        $row[] = '';
+                        $row[] = '';
+                        $row[] = '';
+                    }
                 }
             }
             fputcsv($output, $row);

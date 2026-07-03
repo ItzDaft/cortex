@@ -429,11 +429,12 @@ class Extenso {
         $stmt->execute($params);
         $extensos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Obtenemos las evaluaciones para cada extenso
+        // Obtenemos las evaluaciones para cada extenso agrupadas por versión
         foreach ($extensos as &$extenso) {
             $sqlEval = "SELECT
+                            ev.intento as version,
                             ee.revisor_id,
-                            ee.fecha_evaluacion,
+                            DATE_FORMAT(ee.fecha_evaluacion, '%d/%m/%Y %H:%i') as fecha_evaluacion_fmt,
                             ee.observaciones_generales,
                             ee.veredicto
                         FROM evaluaciones_extensos ee
@@ -445,25 +446,31 @@ class Extenso {
             $stmtEval->execute(['extenso_id' => $extenso['extenso_id']]);
             $evaluacionesRaw = $stmtEval->fetchAll(PDO::FETCH_ASSOC);
 
-            $evaluaciones = [];
+            $versiones = [];
             $revisorMap = [];
             $revisorCounter = 1;
 
             foreach ($evaluacionesRaw as $eval) {
                 $revisorId = $eval['revisor_id'];
+                // Mantenemos la consistencia del alias del revisor a través de las versiones
                 if (!isset($revisorMap[$revisorId])) {
                     $revisorMap[$revisorId] = "Rev " . $revisorCounter;
                     $revisorCounter++;
                 }
 
-                $evaluaciones[] = [
+                $version = $eval['version'];
+                if (!isset($versiones[$version])) {
+                    $versiones[$version] = [];
+                }
+
+                $versiones[$version][] = [
                     'alias' => $revisorMap[$revisorId],
-                    'fecha_evaluacion' => $eval['fecha_evaluacion'],
+                    'fecha_evaluacion' => $eval['fecha_evaluacion_fmt'],
                     'observaciones' => $eval['observaciones_generales'],
                     'veredicto' => $eval['veredicto']
                 ];
             }
-            $extenso['evaluaciones'] = $evaluaciones;
+            $extenso['versiones_evaluadas'] = $versiones;
         }
 
         return $extensos;
