@@ -395,4 +395,77 @@ class Extenso {
         // Retornamos null para que el sistema asuma que NO hay fecha límite
         return null; 
     }
+
+    /**
+     * Obtiene los extensos en estado "Aceptado Final" para la generación de memorias.
+     * Puede filtrar por área si se proporciona.
+     *
+     * @param int|null $area_id ID del área temática (opcional)
+     * @return array Lista de extensos con sus evaluaciones formateadas
+     */
+    public static function obtenerMemoriasAceptadosFinal(?int $area_id = null): array {
+        $pdo = Database::conectar();
+
+        // Obtenemos los extensos Aceptados Final
+        $sql = "SELECT
+                    e.id as extenso_id,
+                    r.titulo,
+                    r.autor_principal,
+                    a.nombre_area
+                FROM extensos e
+                JOIN resumenes r ON e.resumen_id = r.id
+                JOIN areas_tematicas a ON r.area_id = a.id
+                WHERE e.estatus_extenso = 'Aceptado Final'";
+
+        $params = [];
+        if ($area_id !== null) {
+            $sql .= " AND r.area_id = :area_id";
+            $params['area_id'] = $area_id;
+        }
+
+        $sql .= " ORDER BY e.id DESC";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $extensos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Obtenemos las evaluaciones para cada extenso
+        foreach ($extensos as &$extenso) {
+            $sqlEval = "SELECT
+                            ee.revisor_id,
+                            ee.fecha_evaluacion,
+                            ee.observaciones_generales,
+                            ee.veredicto
+                        FROM evaluaciones_extensos ee
+                        JOIN extenso_versiones ev ON ee.extenso_version_id = ev.id
+                        WHERE ev.extenso_id = :extenso_id AND ee.estatus_evaluacion = 'Validada'
+                        ORDER BY ev.intento ASC, ee.id ASC";
+
+            $stmtEval = $pdo->prepare($sqlEval);
+            $stmtEval->execute(['extenso_id' => $extenso['extenso_id']]);
+            $evaluacionesRaw = $stmtEval->fetchAll(PDO::FETCH_ASSOC);
+
+            $evaluaciones = [];
+            $revisorMap = [];
+            $revisorCounter = 1;
+
+            foreach ($evaluacionesRaw as $eval) {
+                $revisorId = $eval['revisor_id'];
+                if (!isset($revisorMap[$revisorId])) {
+                    $revisorMap[$revisorId] = "Rev " . $revisorCounter;
+                    $revisorCounter++;
+                }
+
+                $evaluaciones[] = [
+                    'alias' => $revisorMap[$revisorId],
+                    'fecha_evaluacion' => $eval['fecha_evaluacion'],
+                    'observaciones' => $eval['observaciones_generales'],
+                    'veredicto' => $eval['veredicto']
+                ];
+            }
+            $extenso['evaluaciones'] = $evaluaciones;
+        }
+
+        return $extensos;
+    }
 }

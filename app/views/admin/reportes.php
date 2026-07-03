@@ -281,6 +281,24 @@
 
     <div class="tab-pane fade p-3" id="memorias" role="tabpanel">
         <h3 class="mt-3">Reportes Predefinidos</h3>
-        <p class="lead text-muted">Próximamente: Botones para descargar reportes complejos como las memorias del congreso.</p>
+        <p class="lead text-muted">Descarga de memorias para extensos con estatus "Aceptado Final".</p>
+        <div class="card mb-4">
+            <div class="card-body">
+                <form action="<?php echo BASE_URL; ?>administrador/exportarMemoriasExtensos" method="GET" class="row align-items-end">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Área temática</label>
+                        <select name="area_id" class="form-select">
+                            <option value="">(Todas las áreas)</option>
+                            <?php foreach($areas as $area): ?>
+                                <option value="<?php echo $area['id']; ?>"><?php echo htmlspecialchars($area['nombre_area']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <button type="submit" class="btn btn-primary">Descargar Memorias CSV</button>
+                    </div>
+                </form>
+            </div>
         </div>
+    </div>
 </div>

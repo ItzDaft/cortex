@@ -954,4 +954,70 @@ public function exportarPagosReportes() {
             'fallidos' => $errores
         ]);
     }
+
+    /**
+     * (API) Exporta a CSV los reportes de memorias para extensos "Aceptado Final".
+     * Soporta filtrado por área temática.
+     */
+    public function exportarMemoriasExtensos() {
+        if (!$this->autorizar()) return;
+
+        $area_id = isset($_GET['area_id']) && $_GET['area_id'] !== '' ? (int)$_GET['area_id'] : null;
+
+        $extensos = Extenso::obtenerMemoriasAceptadosFinal($area_id);
+
+        if (empty($extensos)) {
+            echo "No hay datos para exportar.";
+            return;
+        }
+
+        // Determine max evaluations for any extenso to build dynamic headers
+        $maxEvals = 0;
+        foreach ($extensos as $ext) {
+            $numEvals = count($ext['evaluaciones']);
+            if ($numEvals > $maxEvals) {
+                $maxEvals = $numEvals;
+            }
+        }
+
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="memorias_extensos_' . date('Ymd_His') . '.csv"');
+
+        $output = fopen('php://output', 'w');
+        // Agregamos BOM para correcta visualización en Excel
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+
+        $headers = ['ID', 'Nombre del Extenso', 'Autor Principal', 'Área Temática'];
+        for ($i = 1; $i <= $maxEvals; $i++) {
+            $headers[] = "Revisor ($i)";
+            $headers[] = "Fecha Eval ($i)";
+            $headers[] = "Comentarios ($i)";
+        }
+        fputcsv($output, $headers);
+
+        foreach ($extensos as $ext) {
+            $row = [
+                $ext['extenso_id'],
+                $ext['titulo'],
+                $ext['autor_principal'],
+                $ext['nombre_area']
+            ];
+
+            $evals = $ext['evaluaciones'];
+            for ($i = 0; $i < $maxEvals; $i++) {
+                if (isset($evals[$i])) {
+                    $row[] = $evals[$i]['alias'];
+                    $row[] = $evals[$i]['fecha_evaluacion'];
+                    $row[] = $evals[$i]['observaciones'];
+                } else {
+                    $row[] = '';
+                    $row[] = '';
+                    $row[] = '';
+                }
+            }
+            fputcsv($output, $row);
+        }
+
+        fclose($output);
+    }
 }
